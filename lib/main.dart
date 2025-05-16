@@ -15,7 +15,7 @@ class MainApp extends StatelessWidget {
       home: Builder(
         builder: (context) {
           final size = MediaQuery.of(context).size;
-          final menuWidth = size.width / 6;
+          final menuWidth = size.width / 4;
 
           return Scaffold(
             backgroundColor: Colors.grey[200],
