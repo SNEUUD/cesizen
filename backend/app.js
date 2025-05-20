@@ -22,3 +22,46 @@ db.connect((err) => {
     console.log("Connecté à la base de données MySQL !");
   }
 });
+
+app.get("/", (req, res) => {
+  res.send("Backend Node.js OK");
+});
+
+app.post("/login", (req, res) => {
+  const { emailUtilisateur, motDePasseUtilisateur } = req.body;
+
+  const sql = `
+    SELECT * FROM Utilisateurs
+    WHERE emailUtilisateur = ? AND motDePasseUtilisateur = ?
+  `;
+
+  db.query(sql, [emailUtilisateur, motDePasseUtilisateur], (err, results) => {
+    if (err) {
+      console.error("Erreur lors de la connexion :", err);
+      return res.status(500).json({ error: "Erreur serveur" });
+    }
+
+    if (results.length === 0) {
+      return res.status(401).json({ error: "Email ou mot de passe incorrect" });
+    }
+
+    const utilisateur = results[0];
+    res.status(200).json({
+      message: "Connexion réussie",
+      utilisateur: {
+        id: utilisateur.idUtilisateur,
+        nom: utilisateur.nomUtilisateur,
+        prénom: utilisateur.prénomUtilisateur,
+        email: utilisateur.emailUtilisateur,
+        pseudo: utilisateur.pseudoUtilisateur,
+        role: utilisateur.Roles_idRole,
+      },
+    });
+  });
+});
+
+const PORT = process.env.PORT || 3050;
+
+app.listen(PORT, () => {
+  console.log(`Serveur Node.js démarré sur http://localhost:${PORT}`);
+});

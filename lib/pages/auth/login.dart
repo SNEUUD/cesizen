@@ -1,8 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
 import 'register.dart';
 
-class LoginPage extends StatelessWidget {
+class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+
+  String? errorMessage;
+
+  Future<void> login() async {
+    final url = Uri.parse('http://0.0.0.0:3050/login'); // ← Remplace <TON_IP>
+
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'emailUtilisateur': emailController.text,
+        'motDePasseUtilisateur': passwordController.text,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      print("Connecté : ${data['utilisateur']}");
+      // Tu peux naviguer vers la page d’accueil ou enregistrer l'utilisateur
+    } else {
+      setState(() {
+        errorMessage = jsonDecode(response.body)['error'];
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +54,7 @@ class LoginPage extends StatelessWidget {
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
-              BoxShadow(
+              const BoxShadow(
                 color: Colors.black12,
                 blurRadius: 10,
                 offset: Offset(0, 4),
@@ -28,46 +64,48 @@ class LoginPage extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Ajout du logo CESIzen
-              Padding(
-                padding: const EdgeInsets.only(bottom: 24),
-                child: Image.asset(
-                  'assets/images/logo.png',
-                  height: 80,
-                  fit: BoxFit.contain,
-                ),
-              ),
+              Image.asset('assets/images/logo.png', height: 80),
+              const SizedBox(height: 24),
               TextField(
-                decoration: InputDecoration(
+                controller: emailController,
+                decoration: const InputDecoration(
                   labelText: 'Email',
                   border: OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 16),
               TextField(
+                controller: passwordController,
                 obscureText: true,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Mot de passe',
                   border: OutlineInputBorder(),
                 ),
               ),
+              if (errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(
+                    errorMessage!,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    // Action de connexion à implémenter
-                  },
+                  onPressed: login,
                   child: const Text('Se connecter'),
                 ),
               ),
-              // Ajout du lien "Créer un compte"
               const SizedBox(height: 16),
               GestureDetector(
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => RegisterPage()),
+                    MaterialPageRoute(
+                      builder: (context) => const RegisterPage(),
+                    ),
                   );
                 },
                 child: Text(
