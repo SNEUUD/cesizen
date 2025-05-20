@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../pages/auth/login.dart';
 
 class SideMenu extends StatelessWidget {
   final double width;
@@ -37,36 +38,57 @@ class SideMenu extends StatelessWidget {
           // Menu items avec icône + texte
           Padding(
             padding: EdgeInsets.symmetric(horizontal: width * 0.1),
-            child: Row(
-              children: [
-                Icon(Icons.home, color: Colors.black, size: iconSize),
-                SizedBox(width: 12),
-                Text("Accueil", style: TextStyle(fontSize: textSize)),
-              ],
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () {
+                // Action pour Accueil
+              },
+              child: Row(
+                children: [
+                  Icon(Icons.home, color: Colors.black, size: iconSize),
+                  SizedBox(width: 12),
+                  Text("Accueil", style: TextStyle(fontSize: textSize)),
+                ],
+              ),
             ),
           ),
           SizedBox(height: spacing),
 
           Padding(
             padding: EdgeInsets.symmetric(horizontal: width * 0.1),
-            child: Row(
-              children: [
-                Icon(Icons.settings, color: Colors.black, size: iconSize),
-                SizedBox(width: 12),
-                Text("Paramètres", style: TextStyle(fontSize: textSize)),
-              ],
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () {
+                // Action pour Paramètres
+              },
+              child: Row(
+                children: [
+                  Icon(Icons.settings, color: Colors.black, size: iconSize),
+                  SizedBox(width: 12),
+                  Text("Paramètres", style: TextStyle(fontSize: textSize)),
+                ],
+              ),
             ),
           ),
           SizedBox(height: spacing),
 
           Padding(
             padding: EdgeInsets.symmetric(horizontal: width * 0.1),
-            child: Row(
-              children: [
-                Icon(Icons.person, color: Colors.black, size: iconSize),
-                SizedBox(width: 12),
-                Text("Profil", style: TextStyle(fontSize: textSize)),
-              ],
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => LoginPage()),
+                );
+              },
+              child: Row(
+                children: [
+                  Icon(Icons.person, color: Colors.black, size: iconSize),
+                  SizedBox(width: 12),
+                  Text("Connexion", style: TextStyle(fontSize: textSize)),
+                ],
+              ),
             ),
           ),
         ],
