@@ -1,9 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../pages/auth/login.dart';
 
-class SideMenu extends StatelessWidget {
+class SideMenu extends StatefulWidget {
   final double width;
   const SideMenu({super.key, required this.width});
+
+  @override
+  State<SideMenu> createState() => _SideMenuState();
+}
+
+class _SideMenuState extends State<SideMenu> {
+  String? pseudo;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      pseudo = prefs.getString('pseudo');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,29 +36,24 @@ class SideMenu extends StatelessWidget {
     final logoHeight = screenHeight * 0.08;
 
     return Container(
-      width: width,
+      width: widget.width,
       color: Colors.white,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start, // aligner à gauche
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(height: screenHeight * 0.05),
-
-          // Logo CESIzen
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: width * 0.1),
+            padding: EdgeInsets.symmetric(horizontal: widget.width * 0.1),
             child: Image.asset(
               'assets/images/logo.png',
               height: logoHeight,
               fit: BoxFit.contain,
             ),
           ),
-
           SizedBox(height: spacing * 1.5),
-
-          // Menu items avec icône + texte
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: width * 0.1),
+            padding: EdgeInsets.symmetric(horizontal: widget.width * 0.1),
             child: InkWell(
               borderRadius: BorderRadius.circular(8),
               onTap: () {
@@ -53,9 +69,8 @@ class SideMenu extends StatelessWidget {
             ),
           ),
           SizedBox(height: spacing),
-
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: width * 0.1),
+            padding: EdgeInsets.symmetric(horizontal: widget.width * 0.1),
             child: InkWell(
               borderRadius: BorderRadius.circular(8),
               onTap: () {
@@ -71,25 +86,32 @@ class SideMenu extends StatelessWidget {
             ),
           ),
           SizedBox(height: spacing),
-
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: width * 0.1),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(8),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => LoginPage()),
-                );
-              },
-              child: Row(
-                children: [
-                  Icon(Icons.person, color: Colors.black, size: iconSize),
-                  SizedBox(width: 12),
-                  Text("Connexion", style: TextStyle(fontSize: textSize)),
-                ],
-              ),
-            ),
+            padding: EdgeInsets.symmetric(horizontal: widget.width * 0.1),
+            child: pseudo == null
+                ? InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => LoginPage()),
+                      );
+                    },
+                    child: Row(
+                      children: [
+                        Icon(Icons.person, color: Colors.black, size: iconSize),
+                        SizedBox(width: 12),
+                        Text("Connexion", style: TextStyle(fontSize: textSize)),
+                      ],
+                    ),
+                  )
+                : Row(
+                    children: [
+                      Icon(Icons.person, color: Colors.black, size: iconSize),
+                      SizedBox(width: 12),
+                      Text(pseudo!, style: TextStyle(fontSize: textSize, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
           ),
         ],
       ),

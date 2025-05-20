@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../main.dart';
 
 import 'register.dart';
 
@@ -18,24 +20,46 @@ class _LoginPageState extends State<LoginPage> {
   String? errorMessage;
 
   Future<void> login() async {
-    final url = Uri.parse('http://0.0.0.0:3050/login'); // ← Remplace <TON_IP>
+    try {
+      final url = Uri.parse('http://localhost:3050/login'); // adapte l'URL si besoin
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'emailUtilisateur': emailController.text,
+          'motDePasseUtilisateur': passwordController.text,
+        }),
+      );
 
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'emailUtilisateur': emailController.text,
-        'motDePasseUtilisateur': passwordController.text,
-      }),
-    );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      print("Connecté : ${data['utilisateur']}");
-      // Tu peux naviguer vers la page d’accueil ou enregistrer l'utilisateur
-    } else {
+        // Enregistrement des infos utilisateur
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('id', data['utilisateur']['id']);
+        await prefs.setString('nom', data['utilisateur']['nom']);
+        await prefs.setString('prénom', data['utilisateur']['prénom']);
+        await prefs.setString('email', data['utilisateur']['email']);
+        await prefs.setString('pseudo', data['utilisateur']['pseudo']);
+        await prefs.setInt('role', data['utilisateur']['role']);
+
+        print('Utilisateur connecté : ${data['utilisateur']['nom']}');
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => MainApp()),
+        );
+
+      } else {
+        print('Erreur backend : ${response.body}');
+        setState(() {
+          errorMessage = jsonDecode(response.body)['error'];
+        });
+      }
+    } catch (e) {
+      print('Exception : $e');
       setState(() {
-        errorMessage = jsonDecode(response.body)['error'];
+        errorMessage = "Erreur de connexion au serveur";
       });
     }
   }
