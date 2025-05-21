@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../pages/auth/login.dart';
+import '../main.dart';
 
 class SideMenu extends StatefulWidget {
   final double width;
@@ -88,37 +89,52 @@ class _SideMenuState extends State<SideMenu> {
           SizedBox(height: spacing),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: widget.width * 0.1),
-            child: pseudo == null
-                ? InkWell(
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => LoginPage()),
-                      );
-                    },
-                    child: Row(
-                      children: [
-                        Icon(Icons.person, color: Colors.black, size: iconSize),
-                        SizedBox(width: 12),
-                        Text("Connexion", style: TextStyle(fontSize: textSize)),
-                      ],
+            child:
+                pseudo == null
+                    ? InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => LoginPage()),
+                        );
+                      },
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.person,
+                            color: Colors.black,
+                            size: iconSize,
+                          ),
+                          SizedBox(width: 12),
+                          Text(
+                            "Connexion",
+                            style: TextStyle(fontSize: textSize),
+                          ),
+                        ],
+                      ),
+                    )
+                    : InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: () {},
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.person,
+                            color: Colors.black,
+                            size: iconSize,
+                          ),
+                          SizedBox(width: 12),
+                          Text(
+                            pseudo!,
+                            style: TextStyle(
+                              fontSize: textSize,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  )
-                : InkWell(
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: () {},
-                    child: Row(
-                      children: [
-                        Icon(Icons.person, color: Colors.black, size: iconSize),
-                        SizedBox(width: 12),
-                        Text(
-                          pseudo!,
-                          style: TextStyle(fontSize: textSize, fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                  ),
           ),
           if (pseudo != null) ...[
             SizedBox(height: spacing),
@@ -132,15 +148,17 @@ class _SideMenuState extends State<SideMenu> {
                   setState(() {
                     pseudo = null;
                   });
+                  // Reload de la page après déconnexion
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => MainApp()),
+                  );
                 },
                 child: Row(
                   children: [
                     Icon(Icons.logout, color: Colors.black, size: iconSize),
                     SizedBox(width: 12),
-                    Text(
-                      "Déconnexion",
-                      style: TextStyle(fontSize: textSize),
-                    ),
+                    Text("Déconnexion", style: TextStyle(fontSize: textSize)),
                   ],
                 ),
               ),

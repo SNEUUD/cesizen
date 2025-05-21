@@ -116,6 +116,28 @@ app.post("/register", (req, res) => {
   );
 });
 
+app.get("/ressources", (req, res) => {
+  const sql = "SELECT * FROM Ressources ORDER BY dateRessource DESC";
+
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error("Erreur lors de la récupération des ressources :", err);
+      return res.status(500).json({ error: "Erreur serveur" });
+    }
+
+    // Convertir le buffer MEDIUMBLOB en chaîne base64
+    const ressources = results.map((ressource) => {
+      if (ressource.imageRessource) {
+        // ressource.imageRessource est un Buffer, on le convertit en base64 string
+        ressource.imageRessource = ressource.imageRessource.toString("base64");
+      }
+      return ressource;
+    });
+
+    res.status(200).json(ressources);
+  });
+});
+
 
 const PORT = process.env.PORT || 3050;
 
