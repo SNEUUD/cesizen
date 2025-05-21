@@ -60,6 +60,63 @@ app.post("/login", (req, res) => {
   });
 });
 
+app.post("/register", (req, res) => {
+  const {
+    nomUtilisateur,
+    prénomUtilisateur,
+    emailUtilisateur,
+    pseudoUtilisateur,
+    sexeUtilisateur,
+    dateNaissanceUtilisateur,
+    motDePasseUtilisateur,
+  } = req.body;
+
+  if (
+    !nomUtilisateur ||
+    !prénomUtilisateur ||
+    !emailUtilisateur ||
+    !pseudoUtilisateur ||
+    !motDePasseUtilisateur
+  ) {
+    return res.status(400).json({ error: "Champs requis manquants" });
+  }
+
+  const sql = `
+    INSERT INTO Utilisateurs 
+    (idUtilisateur, nomUtilisateur, prénomUtilisateur, emailUtilisateur, pseudoUtilisateur, sexeUtilisateur, dateNaissanceUtilisateur, motDePasseUtilisateur, Roles_idRole, statusUtilisateur)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+
+  const id = uuidv4();
+  const roleParDéfaut = 1;
+  const statutParDéfaut = "activé";
+
+  db.query(
+    sql,
+    [
+      id,
+      nomUtilisateur,
+      prénomUtilisateur,
+      emailUtilisateur,
+      pseudoUtilisateur,
+      sexeUtilisateur,
+      dateNaissanceUtilisateur,
+      motDePasseUtilisateur,
+      roleParDéfaut,
+      statutParDéfaut,
+    ],
+    (err, result) => {
+      if (err) {
+        console.error("Erreur lors de l'inscription :", err);
+        return res.status(500).json({ error: "Erreur serveur" });
+      }
+
+      res.status(201).json({ message: "Inscription réussie !" });
+    }
+  );
+});
+
+
 const PORT = process.env.PORT || 3050;
 
 app.listen(PORT, () => {

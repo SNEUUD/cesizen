@@ -105,14 +105,47 @@ class _SideMenuState extends State<SideMenu> {
                       ],
                     ),
                   )
-                : Row(
-                    children: [
-                      Icon(Icons.person, color: Colors.black, size: iconSize),
-                      SizedBox(width: 12),
-                      Text(pseudo!, style: TextStyle(fontSize: textSize, fontWeight: FontWeight.bold)),
-                    ],
+                : InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () {},
+                    child: Row(
+                      children: [
+                        Icon(Icons.person, color: Colors.black, size: iconSize),
+                        SizedBox(width: 12),
+                        Text(
+                          pseudo!,
+                          style: TextStyle(fontSize: textSize, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
                   ),
           ),
+          if (pseudo != null) ...[
+            SizedBox(height: spacing),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: widget.width * 0.1),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () async {
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.clear();
+                  setState(() {
+                    pseudo = null;
+                  });
+                },
+                child: Row(
+                  children: [
+                    Icon(Icons.logout, color: Colors.black, size: iconSize),
+                    SizedBox(width: 12),
+                    Text(
+                      "Déconnexion",
+                      style: TextStyle(fontSize: textSize),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
