@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'layout/side-menu.dart';
+import 'pages/ressources.dart';
+import 'pages/rapports.dart';
 
 void main() {
   runApp(const MainApp());
@@ -48,8 +50,15 @@ Future<List<Ressource>> fetchRessources() async {
   }
 }
 
-class MainApp extends StatelessWidget {
+class MainApp extends StatefulWidget {
   const MainApp({super.key});
+
+  @override
+  State<MainApp> createState() => _MainAppState();
+}
+
+class _MainAppState extends State<MainApp> {
+  String currentPage = 'ressources';
 
   @override
   Widget build(BuildContext context) {
@@ -65,91 +74,39 @@ class MainApp extends StatelessWidget {
             body: Row(
               children: [
                 if (!isMobile)
-                  SideMenu(width: menuWidth),
+                  SideMenu(
+                    width: menuWidth,
+                    onAccueil: () => setState(() => currentPage = 'ressources'),
+                    onTrackers: () => setState(() => currentPage = 'rapports'),
+                  ),
                 Expanded(
                   child: Padding(
                     padding: EdgeInsets.all(isMobile ? 4.0 : 16.0),
-                    child: RessourceList(isMobile: isMobile),
+                    child: currentPage == 'ressources'
+                        ? RessourcesPage(isMobile: isMobile)
+                        : RapportsPage(isMobile: isMobile),
                   ),
                 ),
               ],
             ),
             drawer: isMobile
                 ? Drawer(
-                    child: SideMenu(width: constraints.maxWidth * 0.7),
+                    child: SideMenu(
+                      width: constraints.maxWidth * 0.7,
+                      onAccueil: () {
+                        setState(() => currentPage = 'ressources');
+                        Navigator.pop(context);
+                      },
+                      onTrackers: () {
+                        setState(() => currentPage = 'rapports');
+                        Navigator.pop(context);
+                      },
+                    ),
                   )
                 : null,
           );
         },
       ),
-    );
-  }
-}
-
-class RessourceList extends StatelessWidget {
-  final bool isMobile;
-  const RessourceList({super.key, this.isMobile = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<List<Ressource>>(
-      future: fetchRessources(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text('Erreur: ${snapshot.error}'));
-        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(child: Text('Aucune ressource trouvée.'));
-        }
-
-        final ressources = snapshot.data!;
-
-        return ListView.builder(
-          itemCount: ressources.length,
-          itemBuilder: (context, index) {
-            final ressource = ressources[index];
-
-            return Card(
-              margin: EdgeInsets.all(isMobile ? 4.0 : 8.0),
-              child: ListTile(
-                title: Text(
-                  ressource.titre,
-                  style: TextStyle(fontSize: isMobile ? 16 : 20),
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      ressource.message,
-                      style: TextStyle(fontSize: isMobile ? 13 : 16),
-                    ),
-                    if (ressource.image != null) ...[
-                      Center(
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                          child: Image.memory(
-                            ressource.image!,
-                            height: isMobile ? 120 : 250,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                    ],
-                    Text(
-                      'Publié le ${ressource.date.toLocal().toString().split(' ')[0]}',
-                      style: TextStyle(
-                        fontSize: isMobile ? 10 : 12,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
     );
   }
 }

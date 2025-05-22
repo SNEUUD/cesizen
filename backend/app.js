@@ -138,6 +138,19 @@ app.get("/ressources", (req, res) => {
   });
 });
 
+app.get("/rapports", (req, res) => {
+  const sql = "SELECT * FROM Rapports ORDER BY dateRapport DESC";
+
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error("Erreur lors de la récupération des ressources :", err);
+      return res.status(500).json({ error: "Erreur serveur" });
+    }
+
+    res.status(200).json(results);
+  });
+});
+
 
 const PORT = process.env.PORT || 3050;
 

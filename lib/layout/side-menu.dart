@@ -5,7 +5,15 @@ import '../main.dart';
 
 class SideMenu extends StatefulWidget {
   final double width;
-  const SideMenu({super.key, required this.width});
+  final VoidCallback? onAccueil;
+  final VoidCallback? onTrackers;
+
+  const SideMenu({
+    super.key,
+    required this.width,
+    this.onAccueil,
+    this.onTrackers,
+  });
 
   @override
   State<SideMenu> createState() => _SideMenuState();
@@ -57,9 +65,7 @@ class _SideMenuState extends State<SideMenu> {
             padding: EdgeInsets.symmetric(horizontal: widget.width * 0.1),
             child: InkWell(
               borderRadius: BorderRadius.circular(8),
-              onTap: () {
-                // Action pour Accueil
-              },
+              onTap: widget.onAccueil,
               child: Row(
                 children: [
                   Icon(Icons.home, color: Colors.black, size: iconSize),
@@ -70,23 +76,23 @@ class _SideMenuState extends State<SideMenu> {
             ),
           ),
           SizedBox(height: spacing),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: widget.width * 0.1),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(8),
-              onTap: () {
-                // Action pour Paramètres
-              },
-              child: Row(
-                children: [
-                  Icon(Icons.settings, color: Colors.black, size: iconSize),
-                  SizedBox(width: 12),
-                  Text("Paramètres", style: TextStyle(fontSize: textSize)),
-                ],
+          if (pseudo != null) ...[
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: widget.width * 0.1),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: widget.onTrackers, 
+                child: Row(
+                  children: [
+                    Icon(Icons.emoji_emotions, color: Colors.black, size: iconSize),
+                    SizedBox(width: 12),
+                    Text("Trackers d'émotions", style: TextStyle(fontSize: textSize)),
+                  ],
+                ),
               ),
             ),
-          ),
-          SizedBox(height: spacing),
+            SizedBox(height: spacing),
+          ],
           Padding(
             padding: EdgeInsets.symmetric(horizontal: widget.width * 0.1),
             child:
