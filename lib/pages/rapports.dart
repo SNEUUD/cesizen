@@ -66,7 +66,20 @@ Future<List<Emotion>> fetchEmotions() async {
   }
 }
 
-class RapportsPage extends StatelessWidget {
+/// Supprime un rapport via une requête HTTP DELETE
+Future<void> deleteRapport(int id, BuildContext context) async {
+  final response = await http.delete(
+    Uri.parse('http://0.0.0.0:3050/rapports/$id'),
+  );
+  if (response.statusCode != 200) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Erreur lors de la suppression du rapport')),
+    );
+    throw Exception('Erreur lors de la suppression du rapport');
+  }
+}
+
+class RapportsPage extends StatefulWidget {
   final bool isMobile;
   final String userId;
 
@@ -74,101 +87,173 @@ class RapportsPage extends StatelessWidget {
       : super(key: key);
 
   @override
+  State<RapportsPage> createState() => _RapportsPageState();
+}
+
+class _RapportsPageState extends State<RapportsPage> {
+  Future<List<Rapport>>? _rapportsFuture;
+  Future<List<Emotion>>? _emotionsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  void _loadData() {
+    _rapportsFuture = fetchRapports(widget.userId);
+    _emotionsFuture = fetchEmotions();
+  }
+
+  Future<void> _deleteAndRefresh(int id) async {
+    await deleteRapport(id, context);
+    setState(() {
+      _loadData();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Stack(
+    final isMobile = widget.isMobile;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        FutureBuilder<List<Emotion>>(
-          future: fetchEmotions(),
-          builder: (context, emotionsSnapshot) {
-            if (emotionsSnapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            } else if (emotionsSnapshot.hasError) {
-              return Center(child: Text('Erreur: ${emotionsSnapshot.error}'));
-            } else if (!emotionsSnapshot.hasData || emotionsSnapshot.data!.isEmpty) {
-              return const Center(child: Text('Aucune émotion trouvée.'));
-            }
+        const Padding(
+          padding: EdgeInsets.only(top: 24, left: 16, bottom: 8),
+          child: Text(
+            "Rapports",
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.left,
+          ),
+        ),
+        Expanded(
+          child: Stack(
+            children: [
+              FutureBuilder<List<Emotion>>(
+                future: _emotionsFuture,
+                builder: (context, emotionsSnapshot) {
+                  if (emotionsSnapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  } else if (emotionsSnapshot.hasError) {
+                    return Center(child: Text('Erreur: ${emotionsSnapshot.error}'));
+                  } else if (!emotionsSnapshot.hasData || emotionsSnapshot.data!.isEmpty) {
+                    return const Center(child: Text('Aucune émotion trouvée.'));
+                  }
 
-            final emotions = emotionsSnapshot.data!;
-            // Création d'une map id -> intitulé pour accès rapide
-            final emotionMap = {for (var e in emotions) e.id: e.intitule};
+                  final emotions = emotionsSnapshot.data!;
+                  final emotionMap = {for (var e in emotions) e.id: e.intitule};
 
-            return FutureBuilder<List<Rapport>>(
-              future: fetchRapports(userId),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (snapshot.hasError) {
-                  return Center(child: Text('Erreur: ${snapshot.error}'));
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('Aucun rapport trouvé.'));
-                }
+                  return FutureBuilder<List<Rapport>>(
+                    future: _rapportsFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      } else if (snapshot.hasError) {
+                        return Center(child: Text('Erreur: ${snapshot.error}'));
+                      } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return const Center(child: Text('Aucun rapport trouvé.'));
+                      }
 
-                final rapports = snapshot.data!;
+                      final rapports = snapshot.data!;
 
-                return ListView.builder(
-                  itemCount: rapports.length,
-                  itemBuilder: (context, index) {
-                    final rapport = rapports[index];
-                    final emotionLabel = emotionMap[rapport.emotion] ?? 'Inconnu';
+                      return ListView.builder(
+                        itemCount: rapports.length,
+                        itemBuilder: (context, index) {
+                          final rapport = rapports[index];
+                          final emotionLabel = emotionMap[rapport.emotion] ?? 'Inconnu';
 
-                    return Card(
-                      margin: EdgeInsets.all(isMobile ? 4.0 : 8.0),
-                      child: ListTile(
-                        title: Text(
-                          rapport.titre,
-                          style: TextStyle(fontSize: isMobile ? 16 : 20),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              rapport.message,
-                              style: TextStyle(fontSize: isMobile ? 13 : 16),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Émotion : $emotionLabel',
-                              style: TextStyle(
-                                fontSize: isMobile ? 12 : 14,
-                                color: Colors.blueGrey,
-                                fontStyle: FontStyle.italic,
+                          return Card(
+                            margin: EdgeInsets.all(isMobile ? 4.0 : 8.0),
+                            child: ListTile(
+                              title: Text(
+                                rapport.titre,
+                                style: TextStyle(fontSize: isMobile ? 16 : 20),
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    rapport.message,
+                                    style: TextStyle(fontSize: isMobile ? 13 : 16),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Émotion : $emotionLabel',
+                                    style: TextStyle(
+                                      fontSize: isMobile ? 12 : 14,
+                                      color: Colors.blueGrey,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    'Publié le ${rapport.date.toLocal().toString().split(' ')[0]}',
+                                    style: TextStyle(
+                                      fontSize: isMobile ? 10 : 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                tooltip: "Supprimer",
+                                onPressed: () async {
+                                  final confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      title: const Text('Confirmation'),
+                                      content: const Text('Voulez-vous vraiment supprimer ce rapport ?'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(ctx, false),
+                                          child: const Text('Annuler'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(ctx, true),
+                                          child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                  if (confirm == true) {
+                                    await _deleteAndRefresh(rapport.id);
+                                  }
+                                },
                               ),
                             ),
-                            const SizedBox(height: 10),
-                            Text(
-                              'Publié le ${rapport.date.toLocal().toString().split(' ')[0]}',
-                              style: TextStyle(
-                                fontSize: isMobile ? 10 : 12,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
+                          );
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+              Positioned(
+                bottom: 24,
+                left: 24,
+                child: FloatingActionButton(
+                  onPressed: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AddRapportPage(userId: widget.userId),
                       ),
                     );
+                    if (result == true) {
+                      setState(() {
+                        _loadData();
+                      });
+                    }
                   },
-                );
-              },
-            );
-          },
-        ),
-        Positioned(
-          bottom: 24,
-          left: 24,
-          child: FloatingActionButton(
-            onPressed: () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => AddRapportPage(userId: userId),
+                  child: const Icon(Icons.add),
+                  tooltip: "Nouveau Rapport",
                 ),
-              );
-              if (result == true) {
-                (context as Element).reassemble();
-              }
-            },
-            child: const Icon(Icons.add),
-            tooltip: "Nouveau Rapport",
+              ),
+            ],
           ),
         ),
       ],

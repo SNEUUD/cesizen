@@ -49,64 +49,82 @@ class RessourcesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Ressource>>(
-      future: fetchRessources(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text('Erreur: ${snapshot.error}'));
-        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(child: Text('Aucune ressource trouvée.'));
-        }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(top: 24, left: 16, bottom: 8),
+          child: Text(
+            "Ressources",
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.left,
+          ),
+        ),
+        Expanded(
+          child: FutureBuilder<List<Ressource>>(
+            future: fetchRessources(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              } else if (snapshot.hasError) {
+                return Center(child: Text('Erreur: ${snapshot.error}'));
+              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return const Center(child: Text('Aucune ressource trouvée.'));
+              }
 
-        final ressources = snapshot.data!;
+              final ressources = snapshot.data!;
 
-        return ListView.builder(
-          itemCount: ressources.length,
-          itemBuilder: (context, index) {
-            final ressource = ressources[index];
+              return ListView.builder(
+                itemCount: ressources.length,
+                itemBuilder: (context, index) {
+                  final ressource = ressources[index];
 
-            return Card(
-              margin: EdgeInsets.all(isMobile ? 4.0 : 8.0),
-              child: ListTile(
-                title: Text(
-                  ressource.titre,
-                  style: TextStyle(fontSize: isMobile ? 16 : 20),
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      ressource.message,
-                      style: TextStyle(fontSize: isMobile ? 13 : 16),
-                    ),
-                    if (ressource.image != null) ...[
-                      Center(
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                          child: Image.memory(
-                            ressource.image!,
-                            height: isMobile ? 120 : 250,
-                            fit: BoxFit.cover,
+                  return Card(
+                    margin: EdgeInsets.all(isMobile ? 4.0 : 8.0),
+                    child: ListTile(
+                      title: Text(
+                        ressource.titre,
+                        style: TextStyle(fontSize: isMobile ? 16 : 20),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            ressource.message,
+                            style: TextStyle(fontSize: isMobile ? 13 : 16),
                           ),
-                        ),
-                      ),
-                    ],
-                    Text(
-                      'Publié le ${ressource.date.toLocal().toString().split(' ')[0]}',
-                      style: TextStyle(
-                        fontSize: isMobile ? 10 : 12,
-                        color: Colors.grey[600],
+                          if (ressource.image != null) ...[
+                            Center(
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                                child: Image.memory(
+                                  ressource.image!,
+                                  height: isMobile ? 120 : 250,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                          ],
+                          Text(
+                            'Publié le ${ressource.date.toLocal().toString().split(' ')[0]}',
+                            style: TextStyle(
+                              fontSize: isMobile ? 10 : 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
