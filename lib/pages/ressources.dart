@@ -23,7 +23,7 @@ class Ressource {
     return Ressource(
       id: json['idRessource'],
       titre: json['titreRessource'],
-      message: json['messageRessource'],
+      message: json['descriptionRessource'],
       date: DateTime.parse(json['dateRessource']),
       image: json['imageRessource'] != null
           ? base64Decode(json['imageRessource'])
