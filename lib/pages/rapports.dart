@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'add_rapport.dart';
+import 'edit_rapport.dart';
 
 class Emotion {
   final int id;
@@ -21,7 +22,7 @@ class Rapport {
   final int id;
   final String titre;
   final String message;
-  final int emotion; // id de l'émotion
+  final int emotion;
   final DateTime date;
 
   Rapport({
@@ -66,7 +67,6 @@ Future<List<Emotion>> fetchEmotions() async {
   }
 }
 
-/// Supprime un rapport via une requête HTTP DELETE
 Future<void> deleteRapport(int id, BuildContext context) async {
   final response = await http.delete(
     Uri.parse('http://0.0.0.0:3050/rapports/$id'),
@@ -78,6 +78,8 @@ Future<void> deleteRapport(int id, BuildContext context) async {
     throw Exception('Erreur lors de la suppression du rapport');
   }
 }
+
+enum DateFilter { semaine, mois, trimestre, annee, tout }
 
 class RapportsPage extends StatefulWidget {
   final bool isMobile;
@@ -93,6 +95,7 @@ class RapportsPage extends StatefulWidget {
 class _RapportsPageState extends State<RapportsPage> {
   Future<List<Rapport>>? _rapportsFuture;
   Future<List<Emotion>>? _emotionsFuture;
+  DateFilter _selectedFilter = DateFilter.tout;
 
   @override
   void initState() {
@@ -103,6 +106,32 @@ class _RapportsPageState extends State<RapportsPage> {
   void _loadData() {
     _rapportsFuture = fetchRapports(widget.userId);
     _emotionsFuture = fetchEmotions();
+  }
+
+  List<Rapport> _filterRapports(List<Rapport> rapports) {
+    if (_selectedFilter == DateFilter.tout) return rapports;
+    final now = DateTime.now();
+    DateTime start;
+    switch (_selectedFilter) {
+      case DateFilter.semaine:
+        start = now.subtract(Duration(days: now.weekday - 1));
+        break;
+      case DateFilter.mois:
+        start = DateTime(now.year, now.month, 1);
+        break;
+      case DateFilter.trimestre:
+        int currentTrimester = ((now.month - 1) ~/ 3) + 1;
+        int startMonth = (currentTrimester - 1) * 3 + 1;
+        start = DateTime(now.year, startMonth, 1);
+        break;
+      case DateFilter.annee:
+        start = DateTime(now.year, 1, 1);
+        break;
+      case DateFilter.tout:
+        start = DateTime(2000); // Jamais utilisé
+        break;
+    }
+    return rapports.where((r) => r.date.isAfter(start.subtract(const Duration(days: 1)))).toList();
   }
 
   Future<void> _deleteAndRefresh(int id) async {
@@ -127,6 +156,41 @@ class _RapportsPageState extends State<RapportsPage> {
               fontWeight: FontWeight.bold,
             ),
             textAlign: TextAlign.left,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
+          child: DropdownButton<DateFilter>(
+            value: _selectedFilter,
+            items: const [
+              DropdownMenuItem(
+                value: DateFilter.tout,
+                child: Text("Tous"),
+              ),
+              DropdownMenuItem(
+                value: DateFilter.semaine,
+                child: Text("Cette semaine"),
+              ),
+              DropdownMenuItem(
+                value: DateFilter.mois,
+                child: Text("Ce mois"),
+              ),
+              DropdownMenuItem(
+                value: DateFilter.trimestre,
+                child: Text("Ce trimestre"),
+              ),
+              DropdownMenuItem(
+                value: DateFilter.annee,
+                child: Text("Cette année"),
+              ),
+            ],
+            onChanged: (value) {
+              if (value != null) {
+                setState(() {
+                  _selectedFilter = value;
+                });
+              }
+            },
           ),
         ),
         Expanded(
@@ -157,7 +221,7 @@ class _RapportsPageState extends State<RapportsPage> {
                         return const Center(child: Text('Aucun rapport trouvé.'));
                       }
 
-                      final rapports = snapshot.data!;
+                      final rapports = _filterRapports(snapshot.data!);
 
                       return ListView.builder(
                         itemCount: rapports.length,
@@ -198,31 +262,56 @@ class _RapportsPageState extends State<RapportsPage> {
                                   ),
                                 ],
                               ),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red),
-                                tooltip: "Supprimer",
-                                onPressed: () async {
-                                  final confirm = await showDialog<bool>(
-                                    context: context,
-                                    builder: (ctx) => AlertDialog(
-                                      title: const Text('Confirmation'),
-                                      content: const Text('Voulez-vous vraiment supprimer ce rapport ?'),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(ctx, false),
-                                          child: const Text('Annuler'),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit, color: Colors.blue),
+                                    tooltip: "Modifier",
+                                    onPressed: () async {
+                                      final result = await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => EditRapportPage(
+                                            rapport: rapport,
+                                            emotions: emotions,
+                                          ),
                                         ),
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(ctx, true),
-                                          child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
+                                      );
+                                      if (result == true) {
+                                        setState(() {
+                                          _loadData();
+                                        });
+                                      }
+                                    },
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete, color: Colors.red),
+                                    tooltip: "Supprimer",
+                                    onPressed: () async {
+                                      final confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder: (ctx) => AlertDialog(
+                                          title: const Text('Confirmation'),
+                                          content: const Text('Voulez-vous vraiment supprimer ce rapport ?'),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(ctx, false),
+                                              child: const Text('Annuler'),
+                                            ),
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(ctx, true),
+                                              child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
+                                            ),
+                                          ],
                                         ),
-                                      ],
-                                    ),
-                                  );
-                                  if (confirm == true) {
-                                    await _deleteAndRefresh(rapport.id);
-                                  }
-                                },
+                                      );
+                                      if (confirm == true) {
+                                        await _deleteAndRefresh(rapport.id);
+                                      }
+                                    },
+                                  ),
+                                ],
                               ),
                             ),
                           );

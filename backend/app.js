@@ -174,26 +174,29 @@ app.get("/rapports_user", (req, res) => {
   });
 });
 
-
 app.post("/add_rapports", (req, res) => {
-  const { titreRapport, messageRapport, userRapport } = req.body;
+  const { titreRapport, messageRapport, userRapport, emotionRapport } = req.body;
 
-  if (!titreRapport || !messageRapport || !userRapport) {
+  if (!titreRapport || !messageRapport || !userRapport || !emotionRapport) {
     return res.status(400).json({ error: "Champs requis manquants" });
   }
 
   const sql = `
-    INSERT INTO Rapports (titreRapport, messageRapport, userRapport, dateRapport)
-    VALUES (?, ?, ?, NOW())
+    INSERT INTO Rapports (titreRapport, messageRapport, userRapport, emotionRapport, dateRapport)
+    VALUES (?, ?, ?, ?, NOW())
   `;
 
-  db.query(sql, [titreRapport, messageRapport, userRapport], (err, result) => {
-    if (err) {
-      console.error("Erreur lors de l'ajout du rapport :", err);
-      return res.status(500).json({ error: "Erreur serveur" });
+  db.query(
+    sql,
+    [titreRapport, messageRapport, userRapport, emotionRapport],
+    (err, result) => {
+      if (err) {
+        console.error("Erreur lors de l'ajout du rapport :", err);
+        return res.status(500).json({ error: "Erreur serveur" });
+      }
+      res.status(201).json({ message: "Rapport ajouté avec succès !" });
     }
-    res.status(201).json({ message: "Rapport ajouté avec succès !" });
-  });
+  );
 });
 
 app.get("/emotions", (req, res) => {
@@ -206,6 +209,36 @@ app.get("/emotions", (req, res) => {
     }
     res.status(200).json(results);
   });
+});
+
+app.put("/edit_rapports/:id", (req, res) => {
+  const rapportId = req.params.id;
+  const { titreRapport, messageRapport, emotionRapport } = req.body;
+
+  if (!titreRapport || !messageRapport || !emotionRapport) {
+    return res.status(400).json({ error: "Champs manquants" });
+  }
+
+  const sql = `
+    UPDATE Rapports
+    SET titreRapport = ?, messageRapport = ?, emotionRapport = ?
+    WHERE idRapport = ?
+  `;
+
+  db.query(
+    sql,
+    [titreRapport, messageRapport, emotionRapport, rapportId],
+    (err, result) => {
+      if (err) {
+        console.error("Erreur lors de la modification du rapport :", err);
+        return res.status(500).json({ error: "Erreur serveur" });
+      }
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "Rapport non trouvé" });
+      }
+      res.status(200).json({ message: "Rapport modifié avec succès !" });
+    }
+  );
 });
 
 const PORT = process.env.PORT || 3050;
