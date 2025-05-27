@@ -241,6 +241,27 @@ app.put("/edit_rapports/:id", (req, res) => {
   );
 });
 
+app.delete("/delete_rapports/:id", (req, res) => {
+  const rapportId = req.params.id;
+
+  if (!rapportId) {
+    return res.status(400).json({ error: "Paramètre id requis" });
+  }
+
+  const sql = "DELETE FROM Rapports WHERE idRapport = ?";
+
+  db.query(sql, [rapportId], (err, result) => {
+    if (err) {
+      console.error("Erreur lors de la suppression du rapport :", err);
+      return res.status(500).json({ error: "Erreur serveur" });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Rapport non trouvé" });
+    }
+    res.status(200).json({ message: "Rapport supprimé avec succès !" });
+  });
+});
+
 const PORT = process.env.PORT || 3050;
 
 app.listen(PORT, () => {

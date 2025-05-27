@@ -69,7 +69,7 @@ Future<List<Emotion>> fetchEmotions() async {
 
 Future<void> deleteRapport(int id, BuildContext context) async {
   final response = await http.delete(
-    Uri.parse('http://0.0.0.0:3050/rapports/$id'),
+    Uri.parse('http://0.0.0.0:3050/delete_rapports/$id'),
   );
   if (response.statusCode != 200) {
     ScaffoldMessenger.of(context).showSnackBar(
