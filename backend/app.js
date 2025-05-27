@@ -175,6 +175,39 @@ app.get("/rapports_user", (req, res) => {
 });
 
 
+app.post("/add_rapports", (req, res) => {
+  const { titreRapport, messageRapport, userRapport } = req.body;
+
+  if (!titreRapport || !messageRapport || !userRapport) {
+    return res.status(400).json({ error: "Champs requis manquants" });
+  }
+
+  const sql = `
+    INSERT INTO Rapports (titreRapport, messageRapport, userRapport, dateRapport)
+    VALUES (?, ?, ?, NOW())
+  `;
+
+  db.query(sql, [titreRapport, messageRapport, userRapport], (err, result) => {
+    if (err) {
+      console.error("Erreur lors de l'ajout du rapport :", err);
+      return res.status(500).json({ error: "Erreur serveur" });
+    }
+    res.status(201).json({ message: "Rapport ajouté avec succès !" });
+  });
+});
+
+app.get("/emotions", (req, res) => {
+  const sql = "SELECT * FROM Emotions ORDER BY IntituleEmotion ASC";
+
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error("Erreur lors de la récupération des émotions :", err);
+      return res.status(500).json({ error: "Erreur serveur" });
+    }
+    res.status(200).json(results);
+  });
+});
+
 const PORT = process.env.PORT || 3050;
 
 app.listen(PORT, () => {
