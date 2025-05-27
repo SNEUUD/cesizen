@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'layout/side-menu.dart';
 import 'pages/ressources.dart';
 import 'pages/rapports.dart';
@@ -59,6 +60,20 @@ class MainApp extends StatefulWidget {
 
 class _MainAppState extends State<MainApp> {
   String currentPage = 'ressources';
+  String? userId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserId();
+  }
+
+  Future<void> _loadUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      userId = prefs.getString('id');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,7 +99,7 @@ class _MainAppState extends State<MainApp> {
                     padding: EdgeInsets.all(isMobile ? 4.0 : 16.0),
                     child: currentPage == 'ressources'
                         ? RessourcesPage(isMobile: isMobile)
-                        : RapportsPage(isMobile: isMobile),
+                        : RapportsPage(isMobile: isMobile, userId: userId ?? ''),
                   ),
                 ),
               ],

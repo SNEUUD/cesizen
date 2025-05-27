@@ -151,6 +151,29 @@ app.get("/rapports", (req, res) => {
   });
 });
 
+app.get("/rapports_user", (req, res) => {
+  const userId = req.query.userId;
+
+  if (!userId) {
+    return res.status(400).json({ error: "Paramètre userId requis" });
+  }
+
+  const sql = `
+    SELECT * FROM Rapports 
+    WHERE userRapport = ? 
+    ORDER BY dateRapport DESC
+  `;
+
+  db.query(sql, [userId], (err, results) => {
+    if (err) {
+      console.error("Erreur lors de la récupération des rapports :", err);
+      return res.status(500).json({ error: "Erreur serveur" });
+    }
+
+    res.status(200).json(results);
+  });
+});
+
 
 const PORT = process.env.PORT || 3050;
 

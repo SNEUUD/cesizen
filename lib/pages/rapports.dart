@@ -25,8 +25,10 @@ class Rapport {
   }
 }
 
-Future<List<Rapport>> fetchRapports() async {
-  final response = await http.get(Uri.parse('http://0.0.0.0:3050/rapports'));
+Future<List<Rapport>> fetchRapports(String userId) async {
+  final response = await http.get(
+    Uri.parse('http://0.0.0.0:3050/rapports_user?userId=$userId'),
+  );
 
   if (response.statusCode == 200) {
     final List data = jsonDecode(response.body);
@@ -38,12 +40,15 @@ Future<List<Rapport>> fetchRapports() async {
 
 class RapportsPage extends StatelessWidget {
   final bool isMobile;
-  const RapportsPage({super.key, this.isMobile = false});
+  final String userId;
+
+  const RapportsPage({Key? key, required this.userId, this.isMobile = false})
+    : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<Rapport>>(
-      future: fetchRapports(),
+      future: fetchRapports(userId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
