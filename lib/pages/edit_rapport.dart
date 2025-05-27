@@ -9,10 +9,10 @@ class EditRapportPage extends StatefulWidget {
   final List<Emotion> emotions;
 
   const EditRapportPage({
-    Key? key,
+    super.key,
     required this.rapport,
     required this.emotions,
-  }) : super(key: key);
+  });
 
   @override
   State<EditRapportPage> createState() => _EditRapportPageState();

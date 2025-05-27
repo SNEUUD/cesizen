@@ -85,8 +85,7 @@ class RapportsPage extends StatefulWidget {
   final bool isMobile;
   final String userId;
 
-  const RapportsPage({Key? key, required this.userId, this.isMobile = false})
-      : super(key: key);
+  const RapportsPage({super.key, required this.userId, this.isMobile = false});
 
   @override
   State<RapportsPage> createState() => _RapportsPageState();
@@ -338,8 +337,8 @@ class _RapportsPageState extends State<RapportsPage> {
                       });
                     }
                   },
-                  child: const Icon(Icons.add),
                   tooltip: "Nouveau Rapport",
+                  child: const Icon(Icons.add),
                 ),
               ),
             ],
