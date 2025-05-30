@@ -61,17 +61,21 @@ class MainApp extends StatefulWidget {
 class _MainAppState extends State<MainApp> {
   String currentPage = 'ressources';
   String? userId;
+  int? userRole; // Ajoute cette variable
 
   @override
   void initState() {
     super.initState();
-    _loadUserId();
+    _loadUserData();
   }
 
-  Future<void> _loadUserId() async {
+  Future<void> _loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       userId = prefs.getString('id');
+      userRole = prefs.getInt(
+        'role',
+      ); // Stocke le rôle dans les prefs lors de la connexion
     });
   }
 
@@ -97,28 +101,36 @@ class _MainAppState extends State<MainApp> {
                 Expanded(
                   child: Padding(
                     padding: EdgeInsets.all(isMobile ? 4.0 : 16.0),
-                    child: currentPage == 'ressources'
-                        ? RessourcesPage(isMobile: isMobile)
-                        : RapportsPage(isMobile: isMobile, userId: userId ?? ''),
+                    child:
+                        currentPage == 'ressources'
+                            ? RessourcesPage(
+                              isMobile: isMobile,
+                              userRole: userRole ?? 1, // Passe le rôle ici
+                            )
+                            : RapportsPage(
+                              isMobile: isMobile,
+                              userId: userId ?? '',
+                            ),
                   ),
                 ),
               ],
             ),
-            drawer: isMobile
-                ? Drawer(
-                    child: SideMenu(
-                      width: constraints.maxWidth * 0.7,
-                      onAccueil: () {
-                        setState(() => currentPage = 'ressources');
-                        Navigator.pop(context);
-                      },
-                      onTrackers: () {
-                        setState(() => currentPage = 'rapports');
-                        Navigator.pop(context);
-                      },
-                    ),
-                  )
-                : null,
+            drawer:
+                isMobile
+                    ? Drawer(
+                      child: SideMenu(
+                        width: constraints.maxWidth * 0.7,
+                        onAccueil: () {
+                          setState(() => currentPage = 'ressources');
+                          Navigator.pop(context);
+                        },
+                        onTrackers: () {
+                          setState(() => currentPage = 'rapports');
+                          Navigator.pop(context);
+                        },
+                      ),
+                    )
+                    : null,
           );
         },
       ),

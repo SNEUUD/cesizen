@@ -175,7 +175,8 @@ app.get("/rapports_user", (req, res) => {
 });
 
 app.post("/add_rapports", (req, res) => {
-  const { titreRapport, messageRapport, userRapport, emotionRapport } = req.body;
+  const { titreRapport, messageRapport, userRapport, emotionRapport } =
+    req.body;
 
   if (!titreRapport || !messageRapport || !userRapport || !emotionRapport) {
     return res.status(400).json({ error: "Champs requis manquants" });
@@ -330,6 +331,58 @@ app.put("/user/:id", (req, res) => {
   );
 });
 
+app.post("/add_ressource", (req, res) => {
+  const {
+    titreRessource,
+    descriptionRessource,
+    dateRessource,
+    imageRessource,
+  } = req.body;
+
+  if (!titreRessource || !descriptionRessource || !dateRessource) {
+    return res.status(400).json({ error: "Champs requis manquants" });
+  }
+
+  let sql, params;
+  if (imageRessource) {
+    sql = `
+      INSERT INTO Ressources (titreRessource, descriptionRessource, dateRessource, imageRessource)
+      VALUES (?, ?, ?, ?)
+    `;
+    params = [
+      titreRessource,
+      descriptionRessource,
+      dateRessource,
+      Buffer.from(imageRessource, "base64"),
+    ];
+  } else {
+    sql = `
+      INSERT INTO Ressources (titreRessource, descriptionRessource, dateRessource)
+      VALUES (?, ?, ?)
+    `;
+    params = [titreRessource, descriptionRessource, dateRessource];
+  }
+
+  db.query(sql, params, (err, result) => {
+    if (err) {
+      console.error("Erreur lors de l'ajout de la ressource :", err);
+      return res.status(500).json({ error: "Erreur serveur" });
+    }
+    res.status(201).json({ message: "Ressource ajoutée avec succès !" });
+  });
+});
+
+app.delete("/ressources/:id", (req, res) => {
+  const id = req.params.id;
+  const sql = "DELETE FROM Ressources WHERE idRessource = ?";
+  db.query(sql, [id], (err, result) => {
+    if (err) {
+      console.error("Erreur suppression ressource :", err);
+      return res.status(500).json({ error: "Erreur serveur" });
+    }
+    res.status(200).json({ message: "Ressource supprimée" });
+  });
+});
 
 const PORT = process.env.PORT || 3050;
 

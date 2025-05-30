@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'add_ressources.dart'; // Ajoute cet import en haut du fichier
 
 // Modèle Ressource (à déplacer ici ou à importer)
 class Ressource {
@@ -25,9 +26,10 @@ class Ressource {
       titre: json['titreRessource'],
       message: json['descriptionRessource'],
       date: DateTime.parse(json['dateRessource']),
-      image: json['imageRessource'] != null
-          ? base64Decode(json['imageRessource'])
-          : null,
+      image:
+          json['imageRessource'] != null
+              ? base64Decode(json['imageRessource'])
+              : null,
     );
   }
 }
@@ -43,87 +45,205 @@ Future<List<Ressource>> fetchRessources() async {
   }
 }
 
-class RessourcesPage extends StatelessWidget {
+Future<void> deleteRessource(int id, BuildContext context) async {
+  final response = await http.delete(
+    Uri.parse('http://0.0.0.0:3050/ressources/$id'),
+  );
+  if (response.statusCode != 200) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Erreur lors de la suppression de la ressource'),
+      ),
+    );
+  }
+}
+
+class RessourcesPage extends StatefulWidget {
   final bool isMobile;
-  const RessourcesPage({super.key, this.isMobile = false});
+  final int userRole;
+
+  const RessourcesPage({
+    super.key,
+    this.isMobile = false,
+    required this.userRole,
+  });
+
+  @override
+  State<RessourcesPage> createState() => _RessourcesPageState();
+}
+
+class _RessourcesPageState extends State<RessourcesPage> {
+  late Future<List<Ressource>> _ressourcesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRessources();
+  }
+
+  void _loadRessources() {
+    _ressourcesFuture = fetchRessources();
+  }
+
+  Future<void> _deleteAndRefresh(int id) async {
+    await deleteRessource(id, context);
+    setState(() {
+      _loadRessources();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final isMobile = widget.isMobile;
+    return Stack(
       children: [
-        const Padding(
-          padding: EdgeInsets.only(top: 24, left: 16, bottom: 8),
-          child: Text(
-            "Ressources",
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(top: 24, left: 16, bottom: 8),
+              child: Text(
+                "Ressources",
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.left,
+              ),
             ),
-            textAlign: TextAlign.left,
-          ),
-        ),
-        Expanded(
-          child: FutureBuilder<List<Ressource>>(
-            future: fetchRessources(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              } else if (snapshot.hasError) {
-                return Center(child: Text('Erreur: ${snapshot.error}'));
-              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Center(child: Text('Aucune ressource trouvée.'));
-              }
+            Expanded(
+              child: FutureBuilder<List<Ressource>>(
+                future: _ressourcesFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  } else if (snapshot.hasError) {
+                    return Center(child: Text('Erreur: ${snapshot.error}'));
+                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Center(
+                      child: Text('Aucune ressource trouvée.'),
+                    );
+                  }
 
-              final ressources = snapshot.data!;
+                  final ressources = snapshot.data!;
 
-              return ListView.builder(
-                itemCount: ressources.length,
-                itemBuilder: (context, index) {
-                  final ressource = ressources[index];
+                  return ListView.builder(
+                    itemCount: ressources.length,
+                    itemBuilder: (context, index) {
+                      final ressource = ressources[index];
 
-                  return Card(
-                    margin: EdgeInsets.all(isMobile ? 4.0 : 8.0),
-                    child: ListTile(
-                      title: Text(
-                        ressource.titre,
-                        style: TextStyle(fontSize: isMobile ? 16 : 20),
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            ressource.message,
-                            style: TextStyle(fontSize: isMobile ? 13 : 16),
+                      return Card(
+                        margin: EdgeInsets.all(isMobile ? 4.0 : 8.0),
+                        child: ListTile(
+                          title: Text(
+                            ressource.titre,
+                            style: TextStyle(fontSize: isMobile ? 16 : 20),
                           ),
-                          if (ressource.image != null) ...[
-                            Center(
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                                child: Image.memory(
-                                  ressource.image!,
-                                  height: isMobile ? 120 : 250,
-                                  fit: BoxFit.cover,
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                ressource.message,
+                                style: TextStyle(fontSize: isMobile ? 13 : 16),
+                              ),
+                              if (ressource.image != null) ...[
+                                Center(
+                                  child: Container(
+                                    margin: const EdgeInsets.symmetric(
+                                      vertical: 10,
+                                      horizontal: 8,
+                                    ),
+                                    child: Image.memory(
+                                      ressource.image!,
+                                      height: isMobile ? 120 : 250,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              Text(
+                                'Publié le ${ressource.date.toLocal().toString().split(' ')[0]}',
+                                style: TextStyle(
+                                  fontSize: isMobile ? 10 : 12,
+                                  color: Colors.grey[600],
                                 ),
                               ),
-                            ),
-                          ],
-                          Text(
-                            'Publié le ${ressource.date.toLocal().toString().split(' ')[0]}',
-                            style: TextStyle(
-                              fontSize: isMobile ? 10 : 12,
-                              color: Colors.grey[600],
-                            ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
+                          trailing:
+                              widget.userRole == 2
+                                  ? IconButton(
+                                    icon: const Icon(
+                                      Icons.delete,
+                                      color: Colors.red,
+                                    ),
+                                    tooltip: "Supprimer la ressource",
+                                    onPressed: () async {
+                                      final confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder:
+                                            (ctx) => AlertDialog(
+                                              title: const Text('Confirmation'),
+                                              content: const Text(
+                                                'Voulez-vous vraiment supprimer cette ressource ?',
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed:
+                                                      () => Navigator.pop(
+                                                        ctx,
+                                                        false,
+                                                      ),
+                                                  child: const Text('Annuler'),
+                                                ),
+                                                TextButton(
+                                                  onPressed:
+                                                      () => Navigator.pop(
+                                                        ctx,
+                                                        true,
+                                                      ),
+                                                  child: const Text(
+                                                    'Supprimer',
+                                                    style: TextStyle(
+                                                      color: Colors.red,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                      );
+                                      if (confirm == true) {
+                                        await _deleteAndRefresh(ressource.id);
+                                      }
+                                    },
+                                  )
+                                  : null,
+                        ),
+                      );
+                    },
                   );
                 },
-              );
-            },
-          ),
+              ),
+            ),
+          ],
         ),
+        if (widget.userRole == 2)
+          Positioned(
+            bottom: 24,
+            left: 24,
+            child: FloatingActionButton(
+              onPressed: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AddRessourcePage()),
+                );
+                if (result == true) {
+                  setState(() {
+                    _loadRessources();
+                  });
+                }
+              },
+              child: const Icon(Icons.add),
+              tooltip: "Nouvelle ressource",
+            ),
+          ),
       ],
     );
   }
