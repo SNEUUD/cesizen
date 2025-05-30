@@ -384,6 +384,28 @@ app.delete("/ressources/:id", (req, res) => {
   });
 });
 
+app.put("/ressources/:id", (req, res) => {
+  const id = req.params.id;
+  const { titreRessource, descriptionRessource, imageRessource } = req.body;
+
+  let sql, params;
+  if (imageRessource !== undefined) {
+    sql = "UPDATE Ressources SET titreRessource = ?, descriptionRessource = ?, imageRessource = ? WHERE idRessource = ?";
+    params = [titreRessource, descriptionRessource, imageRessource ? Buffer.from(imageRessource, 'base64') : null, id];
+  } else {
+    sql = "UPDATE Ressources SET titreRessource = ?, descriptionRessource = ? WHERE idRessource = ?";
+    params = [titreRessource, descriptionRessource, id];
+  }
+
+  db.query(sql, params, (err, result) => {
+    if (err) {
+      console.error("Erreur lors de la modification de la ressource :", err);
+      return res.status(500).json({ error: "Erreur serveur" });
+    }
+    res.status(200).json({ message: "Ressource modifiée avec succès !" });
+  });
+});
+
 const PORT = process.env.PORT || 3050;
 
 app.listen(PORT, () => {

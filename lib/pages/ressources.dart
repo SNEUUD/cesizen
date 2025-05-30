@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'add_ressources.dart'; // Ajoute cet import en haut du fichier
+import 'edit_ressource.dart';
+
 
 // Modèle Ressource (à déplacer ici ou à importer)
 class Ressource {
@@ -169,50 +171,90 @@ class _RessourcesPageState extends State<RessourcesPage> {
                           ),
                           trailing:
                               widget.userRole == 2
-                                  ? IconButton(
-                                    icon: const Icon(
-                                      Icons.delete,
-                                      color: Colors.red,
-                                    ),
-                                    tooltip: "Supprimer la ressource",
-                                    onPressed: () async {
-                                      final confirm = await showDialog<bool>(
-                                        context: context,
-                                        builder:
-                                            (ctx) => AlertDialog(
-                                              title: const Text('Confirmation'),
-                                              content: const Text(
-                                                'Voulez-vous vraiment supprimer cette ressource ?',
-                                              ),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed:
-                                                      () => Navigator.pop(
-                                                        ctx,
-                                                        false,
-                                                      ),
-                                                  child: const Text('Annuler'),
-                                                ),
-                                                TextButton(
-                                                  onPressed:
-                                                      () => Navigator.pop(
-                                                        ctx,
-                                                        true,
-                                                      ),
-                                                  child: const Text(
-                                                    'Supprimer',
-                                                    style: TextStyle(
-                                                      color: Colors.red,
-                                                    ),
+                                  ? Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.edit,
+                                          color: Colors.blue,
+                                        ),
+                                        tooltip: "Modifier la ressource",
+                                        onPressed: () async {
+                                          final result = await Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder:
+                                                  (_) => EditRessourcePage(
+                                                    id: ressource.id,
+                                                    titre: ressource.titre,
+                                                    message: ressource.message,
+                                                    image: ressource.image,
+                                                    userRole: widget.userRole,
                                                   ),
-                                                ),
-                                              ],
                                             ),
-                                      );
-                                      if (confirm == true) {
-                                        await _deleteAndRefresh(ressource.id);
-                                      }
-                                    },
+                                          );
+                                          if (result == true) {
+                                            setState(() {
+                                              _loadRessources();
+                                            });
+                                          }
+                                        },
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.delete,
+                                          color: Colors.red,
+                                        ),
+                                        tooltip: "Supprimer la ressource",
+                                        onPressed: () async {
+                                          final confirm = await showDialog<
+                                            bool
+                                          >(
+                                            context: context,
+                                            builder:
+                                                (ctx) => AlertDialog(
+                                                  title: const Text(
+                                                    'Confirmation',
+                                                  ),
+                                                  content: const Text(
+                                                    'Voulez-vous vraiment supprimer cette ressource ?',
+                                                  ),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed:
+                                                          () => Navigator.pop(
+                                                            ctx,
+                                                            false,
+                                                          ),
+                                                      child: const Text(
+                                                        'Annuler',
+                                                      ),
+                                                    ),
+                                                    TextButton(
+                                                      onPressed:
+                                                          () => Navigator.pop(
+                                                            ctx,
+                                                            true,
+                                                          ),
+                                                      child: const Text(
+                                                        'Supprimer',
+                                                        style: TextStyle(
+                                                          color: Colors.red,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                          );
+                                          if (confirm == true) {
+                                            await _deleteAndRefresh(
+                                              ressource.id,
+                                            );
+                                          }
+                                        },
+                                      ),
+                                    ],
                                   )
                                   : null,
                         ),
