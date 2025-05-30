@@ -262,6 +262,75 @@ app.delete("/delete_rapports/:id", (req, res) => {
   });
 });
 
+app.get("/user/:id", (req, res) => {
+  const userId = req.params.id;
+
+  const sql = `SELECT * FROM Utilisateurs WHERE idUtilisateur = ?`;
+
+  db.query(sql, [userId], (err, results) => {
+    if (err) {
+      console.error("Erreur lors de la récupération de l'utilisateur :", err);
+      return res.status(500).json({ error: "Erreur serveur" });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ error: "Utilisateur non trouvé" });
+    }
+
+    const u = results[0];
+    res.status(200).json({
+      id: u.idUtilisateur,
+      nom: u.nomUtilisateur,
+      prénom: u.prénomUtilisateur,
+      email: u.emailUtilisateur,
+      pseudo: u.pseudoUtilisateur,
+      sexe: u.sexeUtilisateur,
+      // dateNaissance: u.dateNaissanceUtilisateur,  <-- supprimé
+      motDePasse: u.motDePasseUtilisateur,
+    });
+  });
+});
+
+// PUT /user/:id
+app.put("/user/:id", (req, res) => {
+  const userId = req.params.id;
+  const { nom, prénom, email, pseudo, sexe, motDePasse } = req.body;
+
+  if (
+    !nom ||
+    !prénom ||
+    !email ||
+    !pseudo ||
+    !sexe ||
+    // !dateNaissance ||  <-- supprimé
+    !motDePasse
+  ) {
+    return res.status(400).json({ error: "Champs requis manquants" });
+  }
+
+  const sql = `
+    UPDATE Utilisateurs
+    SET nomUtilisateur = ?, prénomUtilisateur = ?, emailUtilisateur = ?, pseudoUtilisateur = ?, sexeUtilisateur = ?, motDePasseUtilisateur = ?
+    WHERE idUtilisateur = ?
+  `;
+
+  db.query(
+    sql,
+    [nom, prénom, email, pseudo, sexe, motDePasse, userId],
+    (err, result) => {
+      if (err) {
+        console.error("Erreur lors de la mise à jour de l'utilisateur :", err);
+        return res.status(500).json({ error: "Erreur serveur" });
+      }
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "Utilisateur non trouvé" });
+      }
+      res.status(200).json({ message: "Utilisateur mis à jour avec succès !" });
+    }
+  );
+});
+
+
 const PORT = process.env.PORT || 3050;
 
 app.listen(PORT, () => {

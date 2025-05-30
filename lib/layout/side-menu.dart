@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../pages/auth/login.dart';
+import '../pages/profil_user.dart';
 import '../main.dart';
 
 class SideMenu extends StatefulWidget {
@@ -21,6 +22,7 @@ class SideMenu extends StatefulWidget {
 
 class _SideMenuState extends State<SideMenu> {
   String? pseudo;
+  String? userId;
 
   @override
   void initState() {
@@ -32,6 +34,7 @@ class _SideMenuState extends State<SideMenu> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       pseudo = prefs.getString('pseudo');
+      userId = prefs.getString('id');
     });
   }
 
@@ -81,12 +84,19 @@ class _SideMenuState extends State<SideMenu> {
               padding: EdgeInsets.symmetric(horizontal: widget.width * 0.1),
               child: InkWell(
                 borderRadius: BorderRadius.circular(8),
-                onTap: widget.onTrackers, 
+                onTap: widget.onTrackers,
                 child: Row(
                   children: [
-                    Icon(Icons.emoji_emotions, color: Colors.black, size: iconSize),
+                    Icon(
+                      Icons.emoji_emotions,
+                      color: Colors.black,
+                      size: iconSize,
+                    ),
                     SizedBox(width: 12),
-                    Text("Trackers d'émotions", style: TextStyle(fontSize: textSize)),
+                    Text(
+                      "Trackers d'émotions",
+                      style: TextStyle(fontSize: textSize),
+                    ),
                   ],
                 ),
               ),
@@ -122,7 +132,15 @@ class _SideMenuState extends State<SideMenu> {
                     )
                     : InkWell(
                       borderRadius: BorderRadius.circular(8),
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) => ProfilUserPage(userId: userId!),
+                          ),
+                        );
+                      },
                       child: Row(
                         children: [
                           Icon(
@@ -153,8 +171,8 @@ class _SideMenuState extends State<SideMenu> {
                   await prefs.clear();
                   setState(() {
                     pseudo = null;
+                    userId = null;
                   });
-                  // Reload de la page après déconnexion
                   Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(builder: (context) => MainApp()),
