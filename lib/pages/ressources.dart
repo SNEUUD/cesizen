@@ -282,8 +282,8 @@ class _RessourcesPageState extends State<RessourcesPage> {
                   });
                 }
               },
-              child: const Icon(Icons.add),
               tooltip: "Nouvelle ressource",
+              child: const Icon(Icons.add),
             ),
           ),
       ],

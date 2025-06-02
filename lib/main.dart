@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'layout/side-menu.dart';
 import 'pages/ressources.dart';
 import 'pages/rapports.dart';
+import 'pages/admin.dart';
 
 void main() {
   runApp(const MainApp());
@@ -97,6 +98,10 @@ class _MainAppState extends State<MainApp> {
                     width: menuWidth,
                     onAccueil: () => setState(() => currentPage = 'ressources'),
                     onTrackers: () => setState(() => currentPage = 'rapports'),
+                    onAdmin:
+                        () => setState(
+                          () => currentPage = 'admin',
+                        ), // Ajoute ceci
                   ),
                 Expanded(
                   child: Padding(
@@ -107,10 +112,12 @@ class _MainAppState extends State<MainApp> {
                               isMobile: isMobile,
                               userRole: userRole ?? 1, // Passe le rôle ici
                             )
-                            : RapportsPage(
+                            : currentPage == 'rapports'
+                            ? RapportsPage(
                               isMobile: isMobile,
                               userId: userId ?? '',
-                            ),
+                            )
+                            : AdminPage(), // Ajoute cette ligne pour la page admin
                   ),
                 ),
               ],
@@ -126,6 +133,10 @@ class _MainAppState extends State<MainApp> {
                         },
                         onTrackers: () {
                           setState(() => currentPage = 'rapports');
+                          Navigator.pop(context);
+                        },
+                        onAdmin: () {
+                          setState(() => currentPage = 'admin');
                           Navigator.pop(context);
                         },
                       ),

@@ -390,10 +390,17 @@ app.put("/ressources/:id", (req, res) => {
 
   let sql, params;
   if (imageRessource !== undefined) {
-    sql = "UPDATE Ressources SET titreRessource = ?, descriptionRessource = ?, imageRessource = ? WHERE idRessource = ?";
-    params = [titreRessource, descriptionRessource, imageRessource ? Buffer.from(imageRessource, 'base64') : null, id];
+    sql =
+      "UPDATE Ressources SET titreRessource = ?, descriptionRessource = ?, imageRessource = ? WHERE idRessource = ?";
+    params = [
+      titreRessource,
+      descriptionRessource,
+      imageRessource ? Buffer.from(imageRessource, "base64") : null,
+      id,
+    ];
   } else {
-    sql = "UPDATE Ressources SET titreRessource = ?, descriptionRessource = ? WHERE idRessource = ?";
+    sql =
+      "UPDATE Ressources SET titreRessource = ?, descriptionRessource = ? WHERE idRessource = ?";
     params = [titreRessource, descriptionRessource, id];
   }
 
@@ -403,6 +410,26 @@ app.put("/ressources/:id", (req, res) => {
       return res.status(500).json({ error: "Erreur serveur" });
     }
     res.status(200).json({ message: "Ressource modifiée avec succès !" });
+  });
+});
+
+app.get("/users", (req, res) => {
+  const sql = `
+    SELECT 
+      idUtilisateur AS idUser,
+      pseudoUtilisateur AS pseudo,
+      emailUtilisateur AS email,
+      Roles_idRole AS role
+    FROM Utilisateurs
+    ORDER BY pseudoUtilisateur ASC
+  `;
+
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error("Erreur lors de la récupération des utilisateurs :", err);
+      return res.status(500).json({ error: "Erreur serveur" });
+    }
+    res.status(200).json(results);
   });
 });
 

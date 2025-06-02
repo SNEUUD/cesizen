@@ -8,12 +8,14 @@ class SideMenu extends StatefulWidget {
   final double width;
   final VoidCallback? onAccueil;
   final VoidCallback? onTrackers;
+  final VoidCallback? onAdmin;
 
   const SideMenu({
     super.key,
     required this.width,
     this.onAccueil,
     this.onTrackers,
+    this.onAdmin,
   });
 
   @override
@@ -23,6 +25,7 @@ class SideMenu extends StatefulWidget {
 class _SideMenuState extends State<SideMenu> {
   String? pseudo;
   String? userId;
+  int userRole = 0; // Ajout d'une variable pour le rôle de l'utilisateur
 
   @override
   void initState() {
@@ -35,6 +38,7 @@ class _SideMenuState extends State<SideMenu> {
     setState(() {
       pseudo = prefs.getString('pseudo');
       userId = prefs.getString('id');
+      userRole = prefs.getInt('role') ?? 0; // Chargement du rôle
     });
   }
 
@@ -160,6 +164,30 @@ class _SideMenuState extends State<SideMenu> {
                       ),
                     ),
           ),
+          if (userRole == 2) ...[
+            SizedBox(height: spacing),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: widget.width * 0.1),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: widget.onAdmin, // Utilise le callback
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.admin_panel_settings,
+                      color: Colors.black,
+                      size: iconSize,
+                    ),
+                    SizedBox(width: 12),
+                    Text(
+                      "Administration",
+                      style: TextStyle(fontSize: textSize),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
           if (pseudo != null) ...[
             SizedBox(height: spacing),
             Padding(
