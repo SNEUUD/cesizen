@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import './add_user.dart';
+import './edit_user.dart';
 import 'dart:convert';
 
 // Modèle utilisateur
 class UserAdmin {
-  final int id;
+  final String id; // <-- String au lieu de int
   final String pseudo;
   final String email;
   final int role;
@@ -24,10 +25,9 @@ class UserAdmin {
       return 1;
     }
 
-    int parseId(dynamic value) {
-      if (value is int) return value;
-      if (value is String) return int.tryParse(value) ?? 0;
-      return 0;
+    String parseId(dynamic value) {
+      if (value == null) return '';
+      return value.toString();
     }
 
     return UserAdmin(
@@ -46,6 +46,21 @@ Future<List<UserAdmin>> fetchUsers() async {
     return data.map((json) => UserAdmin.fromJson(json)).toList();
   } else {
     throw Exception('Erreur lors du chargement des utilisateurs');
+  }
+}
+
+Future<void> deleteUser(String id, BuildContext context) async {
+  final response = await http.delete(
+    Uri.parse('http://0.0.0.0:3050/users/$id'),
+  );
+  if (response.statusCode == 200) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Utilisateur supprimé')));
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Erreur lors de la suppression')),
+    );
   }
 }
 
@@ -95,6 +110,68 @@ class _AdminPageState extends State<AdminPage> {
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [Text(user.email), Text('Rôle : $roleLabel')],
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit, color: Colors.blue),
+                          tooltip: "Modifier l'utilisateur",
+                          onPressed: () async {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (_) => EditUserPage(
+                                      id: user.id,
+                                      pseudo: user.pseudo,
+                                      email: user.email,
+                                      role: user.role,
+                                    ),
+                              ),
+                            );
+                            if (result == true) {
+                              setState(() {
+                                _usersFuture = fetchUsers();
+                              });
+                            }
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          tooltip: "Supprimer l'utilisateur",
+                          onPressed: () async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder:
+                                  (context) => AlertDialog(
+                                    title: const Text('Confirmation'),
+                                    content: Text(
+                                      'Voulez-vous vraiment supprimer ${user.pseudo} ?',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed:
+                                            () => Navigator.pop(context, false),
+                                        child: const Text('Annuler'),
+                                      ),
+                                      TextButton(
+                                        onPressed:
+                                            () => Navigator.pop(context, true),
+                                        child: const Text('Supprimer'),
+                                      ),
+                                    ],
+                                  ),
+                            );
+                            if (confirm == true) {
+                              await deleteUser(user.id, context);
+                              setState(() {
+                                _usersFuture = fetchUsers();
+                              });
+                            }
+                          },
+                        ),
+                      ],
                     ),
                   ),
                 );

@@ -414,23 +414,49 @@ app.put("/ressources/:id", (req, res) => {
 });
 
 app.get("/users", (req, res) => {
-  const sql = `
-    SELECT 
-      idUtilisateur AS idUser,
-      pseudoUtilisateur AS pseudo,
-      emailUtilisateur AS email,
-      Roles_idRole AS role
-    FROM Utilisateurs
-    ORDER BY pseudoUtilisateur ASC
-  `;
-
-  db.query(sql, (err, results) => {
-    if (err) {
-      console.error("Erreur lors de la récupération des utilisateurs :", err);
-      return res.status(500).json({ error: "Erreur serveur" });
+  db.query(
+    "SELECT idUtilisateur AS idUser, pseudoUtilisateur AS pseudo, emailUtilisateur AS email, Roles_idRole AS role FROM Utilisateurs",
+    (err, results) => {
+      if (err) return res.status(500).json({ error: "Erreur serveur" });
+      res.status(200).json(results);
     }
-    res.status(200).json(results);
-  });
+  );
+});
+
+app.delete("/users/:id", (req, res) => {
+  const { id } = req.params;
+  console.log("Tentative de suppression ID:", id);
+  db.query(
+    "DELETE FROM Utilisateurs WHERE idUtilisateur = ?",
+    [id],
+    (err, result) => {
+      if (err) {
+        console.error("Erreur suppression utilisateur :", err);
+        return res.status(500).json({ error: "Erreur serveur" });
+      }
+      if (result.affectedRows === 0) {
+        // Aucun utilisateur supprimé
+        return res.status(404).json({ error: "Utilisateur non trouvé" });
+      }
+      res.status(200).json({ message: "Utilisateur supprimé" });
+    }
+  );
+});
+
+app.put("/users/:id", (req, res) => {
+  const { id } = req.params;
+  const { pseudo, email, role } = req.body;
+  db.query(
+    "UPDATE Utilisateurs SET pseudoUtilisateur = ?, emailUtilisateur = ?, Roles_idRole = ? WHERE idUtilisateur = ?",
+    [pseudo, email, role, id],
+    (err, result) => {
+      if (err) {
+        console.error("Erreur modification utilisateur :", err);
+        return res.status(500).json({ error: "Erreur serveur" });
+      }
+      res.status(200).json({ message: "Utilisateur modifié" });
+    }
+  );
 });
 
 const PORT = process.env.PORT || 3050;
