@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import './add_user.dart';
 import 'dart:convert';
 
 // Modèle utilisateur
@@ -107,8 +108,16 @@ class _AdminPageState extends State<AdminPage> {
         child: Padding(
           padding: const EdgeInsets.only(left: 32.0, bottom: 16.0),
           child: FloatingActionButton(
-            onPressed: () {
-              // TODO: Naviguer vers la page d'ajout d'utilisateur
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AddUserPage()),
+              );
+              if (result == true) {
+                setState(() {
+                  _usersFuture = fetchUsers();
+                });
+              }
             },
             child: const Icon(Icons.person_add),
             tooltip: "Ajouter un utilisateur",
