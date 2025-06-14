@@ -32,7 +32,7 @@ app.post("/login", (req, res) => {
 
   const sql = `
     SELECT * FROM Utilisateurs
-    WHERE emailUtilisateur = ? AND motDePasseUtilisateur = ?
+    WHERE emailUtilisateur = ? AND motDePasseUtilisateur = ? AND statusUtilisateur = 'activé'
   `;
 
   db.query(sql, [emailUtilisateur, motDePasseUtilisateur], (err, results) => {
@@ -42,7 +42,9 @@ app.post("/login", (req, res) => {
     }
 
     if (results.length === 0) {
-      return res.status(401).json({ error: "Email ou mot de passe incorrect" });
+      return res
+        .status(401)
+        .json({ error: "Identifiants incorrects ou compte désactivé" });
     }
 
     const utilisateur = results[0];
@@ -415,7 +417,7 @@ app.put("/ressources/:id", (req, res) => {
 
 app.get("/users", (req, res) => {
   db.query(
-    "SELECT idUtilisateur AS idUser, pseudoUtilisateur AS pseudo, emailUtilisateur AS email, Roles_idRole AS role FROM Utilisateurs",
+    "SELECT idUtilisateur AS idUser, pseudoUtilisateur AS pseudo, emailUtilisateur AS email, Roles_idRole AS role, statusUtilisateur AS status FROM Utilisateurs",
     (err, results) => {
       if (err) return res.status(500).json({ error: "Erreur serveur" });
       res.status(200).json(results);
@@ -455,6 +457,30 @@ app.put("/users/:id", (req, res) => {
         return res.status(500).json({ error: "Erreur serveur" });
       }
       res.status(200).json({ message: "Utilisateur modifié" });
+    }
+  );
+});
+
+app.put("/users/:id/status", (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body; // attendu : "activé" ou "désactivé"
+
+  if (!status || (status !== "activé" && status !== "désactivé")) {
+    return res.status(400).json({ error: "Statut invalide" });
+  }
+
+  db.query(
+    "UPDATE Utilisateurs SET statusUtilisateur = ? WHERE idUtilisateur = ?",
+    [status, id],
+    (err, result) => {
+      if (err) {
+        console.error("Erreur lors de la mise à jour du statut :", err);
+        return res.status(500).json({ error: "Erreur serveur" });
+      }
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "Utilisateur non trouvé" });
+      }
+      res.status(200).json({ message: "Statut mis à jour" });
     }
   );
 });

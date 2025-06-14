@@ -6,16 +6,18 @@ import 'dart:convert';
 
 // Modèle utilisateur
 class UserAdmin {
-  final String id; // <-- String au lieu de int
+  final String id;
   final String pseudo;
   final String email;
   final int role;
+  final String status; // Nouveau champ
 
   UserAdmin({
     required this.id,
     required this.pseudo,
     required this.email,
     required this.role,
+    required this.status,
   });
 
   factory UserAdmin.fromJson(Map<String, dynamic> json) {
@@ -35,10 +37,12 @@ class UserAdmin {
       pseudo: json['pseudo'] ?? json['pseudoUtilisateur'] ?? '',
       email: json['email'] ?? json['emailUtilisateur'] ?? '',
       role: parseRole(json['role'] ?? json['roleUtilisateur']),
+      status: json['status'] ?? json['statusUtilisateur'] ?? 'activé',
     );
   }
 }
 
+// Récupération des utilisateurs
 Future<List<UserAdmin>> fetchUsers() async {
   final response = await http.get(Uri.parse('http://0.0.0.0:3050/users'));
   if (response.statusCode == 200) {
@@ -49,6 +53,7 @@ Future<List<UserAdmin>> fetchUsers() async {
   }
 }
 
+// Suppression
 Future<void> deleteUser(String id, BuildContext context) async {
   final response = await http.delete(
     Uri.parse('http://0.0.0.0:3050/users/$id'),
@@ -64,6 +69,36 @@ Future<void> deleteUser(String id, BuildContext context) async {
   }
 }
 
+// Activation/désactivation
+Future<void> toggleUserStatus(
+  String id,
+  String currentStatus,
+  BuildContext context,
+) async {
+  final newStatus = currentStatus == 'activé' ? 'désactivé' : 'activé';
+
+  final response = await http.put(
+    Uri.parse('http://0.0.0.0:3050/users/$id/status'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'status': newStatus}),
+  );
+
+  if (response.statusCode == 200) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          "Utilisateur ${newStatus == 'activé' ? 'activé' : 'désactivé'}",
+        ),
+      ),
+    );
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Erreur lors de la mise à jour du statut")),
+    );
+  }
+}
+
+// Page Admin
 class AdminPage extends StatefulWidget {
   const AdminPage({super.key});
 
@@ -96,6 +131,7 @@ class _AdminPageState extends State<AdminPage> {
             } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
               return const Center(child: Text('Aucun utilisateur trouvé.'));
             }
+
             final users = snapshot.data!;
             return ListView.builder(
               itemCount: users.length,
@@ -103,13 +139,20 @@ class _AdminPageState extends State<AdminPage> {
                 final user = users[index];
                 String roleLabel =
                     user.role == 2 ? 'Administrateur' : 'Utilisateur';
+
                 return Card(
                   child: ListTile(
                     leading: const Icon(Icons.person),
                     title: Text(user.pseudo),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [Text(user.email), Text('Rôle : $roleLabel')],
+                      children: [
+                        Text(user.email),
+                        Text('Rôle : $roleLabel'),
+                        Text(
+                          'Statut : ${user.status == 'activé' ? 'Activé' : 'Désactivé'}',
+                        ),
+                      ],
                     ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -171,6 +214,31 @@ class _AdminPageState extends State<AdminPage> {
                             }
                           },
                         ),
+                        IconButton(
+                          icon: Icon(
+                            user.status == 'activé'
+                                ? Icons.lock_open
+                                : Icons.lock,
+                            color:
+                                user.status == 'activé'
+                                    ? Colors.green
+                                    : Colors.grey,
+                          ),
+                          tooltip:
+                              user.status == 'activé'
+                                  ? "Désactiver l'utilisateur"
+                                  : "Activer l'utilisateur",
+                          onPressed: () async {
+                            await toggleUserStatus(
+                              user.id,
+                              user.status,
+                              context,
+                            );
+                            setState(() {
+                              _usersFuture = fetchUsers();
+                            });
+                          },
+                        ),
                       ],
                     ),
                   ),
@@ -196,8 +264,8 @@ class _AdminPageState extends State<AdminPage> {
                 });
               }
             },
-            child: const Icon(Icons.person_add),
             tooltip: "Ajouter un utilisateur",
+            child: const Icon(Icons.person_add),
           ),
         ),
       ),
