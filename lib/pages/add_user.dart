@@ -39,7 +39,7 @@ class _AddUserPageState extends State<AddUserPage> {
 
     setState(() => isLoading = true);
 
-    final url = Uri.parse('http://0.0.0.0:3050/register');
+    final url = Uri.parse('http://192.168.1.253:3050/register');
     final response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},

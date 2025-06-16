@@ -31,7 +31,7 @@ class _AddRessourcePageState extends State<AddRessourcePage> {
     };
 
     final response = await http.post(
-      Uri.parse('http://0.0.0.0:3050/add_ressource'),
+      Uri.parse('http://192.168.1.253:3050/add_ressource'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(body),
     );

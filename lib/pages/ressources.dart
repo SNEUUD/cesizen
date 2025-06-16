@@ -37,7 +37,7 @@ class Ressource {
 }
 
 Future<List<Ressource>> fetchRessources() async {
-  final response = await http.get(Uri.parse('http://0.0.0.0:3050/ressources'));
+  final response = await http.get(Uri.parse('http://192.168.1.253:3050/ressources'));
 
   if (response.statusCode == 200) {
     final List data = jsonDecode(response.body);
@@ -49,7 +49,7 @@ Future<List<Ressource>> fetchRessources() async {
 
 Future<void> deleteRessource(int id, BuildContext context) async {
   final response = await http.delete(
-    Uri.parse('http://0.0.0.0:3050/ressources/$id'),
+    Uri.parse('http://192.168.1.253:3050/ressources/$id'),
   );
   if (response.statusCode != 200) {
     ScaffoldMessenger.of(context).showSnackBar(
