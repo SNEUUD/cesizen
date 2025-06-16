@@ -42,7 +42,9 @@ class Ressource {
 }
 
 Future<List<Ressource>> fetchRessources() async {
-  final response = await http.get(Uri.parse('http://192.168.1.253:3050/ressources'));
+  final response = await http.get(
+    Uri.parse('http://192.168.1.253:3050/ressources'),
+  );
 
   if (response.statusCode == 200) {
     final List data = jsonDecode(response.body);
@@ -91,6 +93,15 @@ class _MainAppState extends State<MainApp> {
 
           return Scaffold(
             backgroundColor: Colors.grey[200],
+            appBar:
+                isMobile
+                    ? AppBar(
+                      title: const Text('CESIZen'),
+                      backgroundColor: Colors.white,
+                      iconTheme: const IconThemeData(color: Colors.black),
+                      elevation: 0,
+                    )
+                    : null,
             body: Row(
               children: [
                 if (!isMobile)
@@ -98,10 +109,7 @@ class _MainAppState extends State<MainApp> {
                     width: menuWidth,
                     onAccueil: () => setState(() => currentPage = 'ressources'),
                     onTrackers: () => setState(() => currentPage = 'rapports'),
-                    onAdmin:
-                        () => setState(
-                          () => currentPage = 'admin',
-                        ), // Ajoute ceci
+                    onAdmin: () => setState(() => currentPage = 'admin'),
                   ),
                 Expanded(
                   child: Padding(
@@ -110,14 +118,14 @@ class _MainAppState extends State<MainApp> {
                         currentPage == 'ressources'
                             ? RessourcesPage(
                               isMobile: isMobile,
-                              userRole: userRole ?? 1, // Passe le rôle ici
+                              userRole: userRole ?? 1,
                             )
                             : currentPage == 'rapports'
                             ? RapportsPage(
                               isMobile: isMobile,
                               userId: userId ?? '',
                             )
-                            : AdminPage(), // Ajoute cette ligne pour la page admin
+                            : AdminPage(),
                   ),
                 ),
               ],
