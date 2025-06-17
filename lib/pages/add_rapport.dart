@@ -9,10 +9,7 @@ class Emotion {
   Emotion({required this.id, required this.intitule});
 
   factory Emotion.fromJson(Map<String, dynamic> json) {
-    return Emotion(
-      id: json['idEmotion'],
-      intitule: json['IntituleEmotion'],
-    );
+    return Emotion(id: json['idEmotion'], intitule: json['IntituleEmotion']);
   }
 }
 
@@ -39,11 +36,21 @@ class _AddRapportPageState extends State<AddRapportPage> {
   }
 
   Future<void> fetchEmotions() async {
-    final response = await http.get(Uri.parse('http://192.168.1.253:3050/emotions'));
+    final response = await http.get(
+      Uri.parse('http://192.168.1.253:3050/emotions'),
+    );
     if (response.statusCode == 200) {
       final List data = jsonDecode(response.body);
+      final List<Emotion> loadedEmotions =
+          data.map((json) => Emotion.fromJson(json)).toList();
+      loadedEmotions.sort(
+        (a, b) => a.intitule
+            .substring(2)
+            .toLowerCase()
+            .compareTo(b.intitule.substring(2).toLowerCase()),
+      );
       setState(() {
-        emotions = data.map((json) => Emotion.fromJson(json)).toList();
+        emotions = loadedEmotions;
       });
     }
   }
@@ -74,7 +81,11 @@ class _AddRapportPageState extends State<AddRapportPage> {
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur : ${jsonDecode(response.body)['error'] ?? 'Inconnue'}')),
+        SnackBar(
+          content: Text(
+            'Erreur : ${jsonDecode(response.body)['error'] ?? 'Inconnue'}',
+          ),
+        ),
       );
     }
   }
@@ -96,8 +107,9 @@ class _AddRapportPageState extends State<AddRapportPage> {
                   labelText: 'Titre',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Titre requis' : null,
+                validator:
+                    (value) =>
+                        value == null || value.isEmpty ? 'Titre requis' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -107,8 +119,11 @@ class _AddRapportPageState extends State<AddRapportPage> {
                   border: OutlineInputBorder(),
                 ),
                 maxLines: 5,
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Message requis' : null,
+                validator:
+                    (value) =>
+                        value == null || value.isEmpty
+                            ? 'Message requis'
+                            : null,
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<Emotion>(
@@ -117,32 +132,35 @@ class _AddRapportPageState extends State<AddRapportPage> {
                   labelText: 'Émotion',
                   border: OutlineInputBorder(),
                 ),
-                items: emotions
-                    .map((emotion) => DropdownMenuItem(
-                          value: emotion,
-                          child: Text(emotion.intitule),
-                        ))
-                    .toList(),
+                items:
+                    emotions
+                        .map(
+                          (emotion) => DropdownMenuItem(
+                            value: emotion,
+                            child: Text(emotion.intitule),
+                          ),
+                        )
+                        .toList(),
                 onChanged: (value) {
                   setState(() {
                     selectedEmotion = value;
                   });
                 },
-                validator: (value) =>
-                    value == null ? 'Émotion requise' : null,
+                validator: (value) => value == null ? 'Émotion requise' : null,
               ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: isLoading ? null : _submit,
-                  icon: isLoading
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.send),
+                  icon:
+                      isLoading
+                          ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                          : const Icon(Icons.send),
                   label: const Text('Ajouter'),
                 ),
               ),
