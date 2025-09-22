@@ -5,7 +5,6 @@ import 'package:http/http.dart' as http;
 import 'add_ressources.dart'; // Ajoute cet import en haut du fichier
 import 'edit_ressource.dart';
 
-
 // Modèle Ressource (à déplacer ici ou à importer)
 class Ressource {
   final int id;
@@ -37,7 +36,7 @@ class Ressource {
 }
 
 Future<List<Ressource>> fetchRessources() async {
-  final response = await http.get(Uri.parse('http://192.168.1.253:3050/ressources'));
+  final response = await http.get(Uri.parse('http://backend:3000/ressources'));
 
   if (response.statusCode == 200) {
     final List data = jsonDecode(response.body);
@@ -49,7 +48,7 @@ Future<List<Ressource>> fetchRessources() async {
 
 Future<void> deleteRessource(int id, BuildContext context) async {
   final response = await http.delete(
-    Uri.parse('http://192.168.1.253:3050/ressources/$id'),
+    Uri.parse('http://backend:3000/ressources/$id'),
   );
   if (response.statusCode != 200) {
     ScaffoldMessenger.of(context).showSnackBar(

@@ -36,9 +36,7 @@ class _AddRapportPageState extends State<AddRapportPage> {
   }
 
   Future<void> fetchEmotions() async {
-    final response = await http.get(
-      Uri.parse('http://192.168.1.253:3050/emotions'),
-    );
+    final response = await http.get(Uri.parse('http://backend:3000/emotions'));
     if (response.statusCode == 200) {
       final List data = jsonDecode(response.body);
       final List<Emotion> loadedEmotions =
@@ -61,7 +59,7 @@ class _AddRapportPageState extends State<AddRapportPage> {
     setState(() => isLoading = true);
 
     final response = await http.post(
-      Uri.parse('http://192.168.1.253:3050/add_rapports'),
+      Uri.parse('http://backend:3000/add_rapports'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'titreRapport': titreController.text,
