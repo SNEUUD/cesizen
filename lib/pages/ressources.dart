@@ -36,7 +36,9 @@ class Ressource {
 }
 
 Future<List<Ressource>> fetchRessources() async {
-  final response = await http.get(Uri.parse('http://backend:3000/ressources'));
+  final response = await http.get(
+    Uri.parse('http://chris-crp.freeboxos.fr:3050/ressources'),
+  );
 
   if (response.statusCode == 200) {
     final List data = jsonDecode(response.body);
@@ -48,7 +50,7 @@ Future<List<Ressource>> fetchRessources() async {
 
 Future<void> deleteRessource(int id, BuildContext context) async {
   final response = await http.delete(
-    Uri.parse('http://backend:3000/ressources/$id'),
+    Uri.parse('http://chris-crp.freeboxos.fr:3050/ressources/$id'),
   );
   if (response.statusCode != 200) {
     ScaffoldMessenger.of(context).showSnackBar(

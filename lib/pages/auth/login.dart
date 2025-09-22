@@ -21,7 +21,7 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> login() async {
     try {
-      final url = Uri.parse('http://backend:3000/login');
+      final url = Uri.parse('http://chris-crp.freeboxos.fr:3050/login');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
