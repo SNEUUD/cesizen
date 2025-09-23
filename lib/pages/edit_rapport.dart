@@ -43,7 +43,7 @@ class _EditRapportPageState extends State<EditRapportPage> {
     if (!_formKey.currentState!.validate()) return;
 
     final url = Uri.parse(
-      'http://chris-crp.freeboxos.fr:3050/edit_rapports/${widget.rapport.id}',
+      'https://chris-crp.freeboxos.fr/api/edit_rapports/${widget.rapport.id}',
     );
     final response = await http.put(
       url,
