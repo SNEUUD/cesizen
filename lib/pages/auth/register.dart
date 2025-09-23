@@ -40,7 +40,7 @@ class _RegisterPageState extends State<RegisterPage> {
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final url = Uri.parse('http://chris-crp.freeboxos.fr:3050/register');
+    final url = Uri.parse('https://chris-crp.freeboxos.fr:3050/register');
 
     final response = await http.post(
       url,
@@ -58,7 +58,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
     if (response.statusCode == 201) {
       final loginResponse = await http.post(
-        Uri.parse('http://chris-crp.freeboxos.fr:3050/login'),
+        Uri.parse('https://chris-crp.freeboxos.fr:3050/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'emailUtilisateur': emailController.text.trim(),

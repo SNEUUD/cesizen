@@ -44,7 +44,7 @@ class Rapport {
 Future<List<Rapport>> fetchRapports(String userId) async {
   final response = await http.get(
     Uri.parse(
-      'http://chris-crp.freeboxos.fr:3050/rapports_user?userId=$userId',
+      'https://chris-crp.freeboxos.fr:3050/rapports_user?userId=$userId',
     ),
   );
 
@@ -58,7 +58,7 @@ Future<List<Rapport>> fetchRapports(String userId) async {
 
 Future<List<Emotion>> fetchEmotions() async {
   final response = await http.get(
-    Uri.parse('http://chris-crp.freeboxos.fr:3050/emotions'),
+    Uri.parse('https://chris-crp.freeboxos.fr:3050/emotions'),
   );
   if (response.statusCode == 200) {
     final List data = jsonDecode(response.body);
@@ -70,7 +70,7 @@ Future<List<Emotion>> fetchEmotions() async {
 
 Future<void> deleteRapport(int id, BuildContext context) async {
   final response = await http.delete(
-    Uri.parse('http://chris-crp.freeboxos.fr:3050/delete_rapports/$id'),
+    Uri.parse('https://chris-crp.freeboxos.fr:3050/delete_rapports/$id'),
   );
   if (response.statusCode != 200) {
     ScaffoldMessenger.of(context).showSnackBar(

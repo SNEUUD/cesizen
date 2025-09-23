@@ -39,7 +39,7 @@ class _AddUserPageState extends State<AddUserPage> {
 
     setState(() => isLoading = true);
 
-    final url = Uri.parse('http://chris-crp.freeboxos.fr:3050/register');
+    final url = Uri.parse('https://chris-crp.freeboxos.fr:3050/register');
     final response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
