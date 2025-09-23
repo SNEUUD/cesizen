@@ -44,9 +44,7 @@ class UserAdmin {
 
 // Récupération des utilisateurs
 Future<List<UserAdmin>> fetchUsers() async {
-  final response = await http.get(
-    Uri.parse('https://chris-crp.freeboxos.fr:3050/users'),
-  );
+  final response = await http.get(Uri.parse('https://127.0.0.1:3050/users'));
   if (response.statusCode == 200) {
     final List data = jsonDecode(response.body);
     return data.map((json) => UserAdmin.fromJson(json)).toList();
@@ -58,7 +56,7 @@ Future<List<UserAdmin>> fetchUsers() async {
 // Suppression
 Future<void> deleteUser(String id, BuildContext context) async {
   final response = await http.delete(
-    Uri.parse('https://chris-crp.freeboxos.fr:3050/users/$id'),
+    Uri.parse('https://127.0.0.1:3050/users/$id'),
   );
   if (response.statusCode == 200) {
     ScaffoldMessenger.of(
@@ -80,7 +78,7 @@ Future<void> toggleUserStatus(
   final newStatus = currentStatus == 'activé' ? 'désactivé' : 'activé';
 
   final response = await http.put(
-    Uri.parse('https://chris-crp.freeboxos.fr:3050/users/$id/status'),
+    Uri.parse('https://127.0.0.1:3050/users/$id/status'),
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({'status': newStatus}),
   );

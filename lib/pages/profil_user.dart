@@ -33,7 +33,7 @@ class _ProfilUserPageState extends State<ProfilUserPage> {
 
   Future<void> fetchUserData() async {
     final response = await http.get(
-      Uri.parse('https://chris-crp.freeboxos.fr:3050/user/${widget.userId}'),
+      Uri.parse('https://127.0.0.1:3050/user/${widget.userId}'),
     );
     if (response.statusCode == 200) {
       final user = json.decode(response.body);
@@ -56,7 +56,7 @@ class _ProfilUserPageState extends State<ProfilUserPage> {
 
   Future<void> updateUserData() async {
     final response = await http.put(
-      Uri.parse('https://chris-crp.freeboxos.fr:3050/user/${widget.userId}'),
+      Uri.parse('https://127.0.0.1:3050/user/${widget.userId}'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({
         'nom': nomController.text,
