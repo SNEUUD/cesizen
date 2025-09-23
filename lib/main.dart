@@ -43,7 +43,7 @@ class Ressource {
 
 Future<List<Ressource>> fetchRessources() async {
   final response = await http.get(
-    Uri.parse('http://chris-crp.freeboxos.fr:3050/ressources'),
+    Uri.parse('http://127.0.0.1:3050/ressources'),
   );
 
   if (response.statusCode == 200) {

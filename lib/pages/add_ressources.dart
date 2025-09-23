@@ -31,7 +31,7 @@ class _AddRessourcePageState extends State<AddRessourcePage> {
     };
 
     final response = await http.post(
-      Uri.parse('http://chris-crp.freeboxos.fr:3050/add_ressource'),
+      Uri.parse('http://127.0.0.1:3050/add_ressource'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(body),
     );
