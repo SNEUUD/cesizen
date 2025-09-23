@@ -56,7 +56,7 @@ class _EditRessourcePageState extends State<EditRessourcePage> {
       'imageRessource': imageBytes != null ? base64Encode(imageBytes!) : null,
     };
     final response = await http.put(
-      Uri.parse('http://192.168.1.253:3050/ressources/${widget.id}'),
+      Uri.parse('http://chris-crp.freeboxos.fr:3050/ressources/${widget.id}'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(body),
     );
