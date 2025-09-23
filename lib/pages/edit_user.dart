@@ -41,7 +41,7 @@ class _EditUserPageState extends State<EditUserPage> {
     setState(() => isLoading = true);
 
     final url = Uri.parse(
-      'http://chris-crp.freeboxos.fr:3050/users/${widget.id}',
+      'https://chris-crp.freeboxos.fr/api/users/${widget.id}',
     );
     final response = await http.put(
       url,
