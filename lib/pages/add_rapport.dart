@@ -37,7 +37,7 @@ class _AddRapportPageState extends State<AddRapportPage> {
 
   Future<void> fetchEmotions() async {
     final response = await http.get(
-      Uri.parse('http://127.0.0.1:3050/emotions'),
+      Uri.parse('http://chris-crp.freeboxos.fr:3050/emotions'),
     );
     if (response.statusCode == 200) {
       final List data = jsonDecode(response.body);
@@ -61,7 +61,7 @@ class _AddRapportPageState extends State<AddRapportPage> {
     setState(() => isLoading = true);
 
     final response = await http.post(
-      Uri.parse('http://127.0.0.1:3050/add_rapports'),
+      Uri.parse('http://chris-crp.freeboxos.fr:3050/add_rapports'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'titreRapport': titreController.text,
