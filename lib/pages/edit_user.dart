@@ -40,7 +40,7 @@ class _EditUserPageState extends State<EditUserPage> {
 
     setState(() => isLoading = true);
 
-    final url = Uri.parse('http://127.0.0.1:3050/users/${widget.id}');
+    final url = Uri.parse('https://127.0.0.1:3050/users/${widget.id}');
     final response = await http.put(
       url,
       headers: {'Content-Type': 'application/json'},
