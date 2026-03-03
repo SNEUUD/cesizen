@@ -485,7 +485,7 @@ app.put("/users/:id/status", (req, res) => {
   );
 });
 
-const PORT = process.env.PORT || 3050;
+const PORT = process.env.PORT || 6000;
 
 app.listen(PORT, () => {
   console.log(`Serveur Node.js démarré sur http://localhost:${PORT}`);

@@ -1,8 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // Import pour le .env
 import 'add_rapport.dart';
 import 'edit_rapport.dart';
+
+// --- MODÈLES ---
 
 class Emotion {
   final int id;
@@ -41,11 +44,13 @@ class Rapport {
   }
 }
 
+// --- LOGIQUE API AVEC .ENV ---
+
 Future<List<Rapport>> fetchRapports(String userId) async {
+  final String baseUrl = dotenv.env['API_BASE_URL'] ?? 'https://chris-crp.freeboxos.fr/api';
+  
   final response = await http.get(
-    Uri.parse(
-      'https://chris-crp.freeboxos.fr/api/rapports_user?userId=$userId',
-    ),
+    Uri.parse('$baseUrl/rapports_user?userId=$userId'),
   );
 
   if (response.statusCode == 200) {
@@ -57,9 +62,12 @@ Future<List<Rapport>> fetchRapports(String userId) async {
 }
 
 Future<List<Emotion>> fetchEmotions() async {
+  final String baseUrl = dotenv.env['API_BASE_URL'] ?? 'https://chris-crp.freeboxos.fr/api';
+  
   final response = await http.get(
-    Uri.parse('https://chris-crp.freeboxos.fr/api/emotions'),
+    Uri.parse('$baseUrl/emotions'),
   );
+  
   if (response.statusCode == 200) {
     final List data = jsonDecode(response.body);
     return data.map((json) => Emotion.fromJson(json)).toList();
@@ -69,16 +77,23 @@ Future<List<Emotion>> fetchEmotions() async {
 }
 
 Future<void> deleteRapport(int id, BuildContext context) async {
+  final String baseUrl = dotenv.env['API_BASE_URL'] ?? 'https://chris-crp.freeboxos.fr/api';
+  
   final response = await http.delete(
-    Uri.parse('https://chris-crp.freeboxos.fr/api/delete_rapports/$id'),
+    Uri.parse('$baseUrl/delete_rapports/$id'),
   );
+  
   if (response.statusCode != 200) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Erreur lors de la suppression du rapport')),
-    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erreur lors de la suppression du rapport')),
+      );
+    }
     throw Exception('Erreur lors de la suppression du rapport');
   }
 }
+
+// --- INTERFACE ---
 
 enum DateFilter { semaine, mois, trimestre, annee, tout }
 
@@ -104,8 +119,10 @@ class _RapportsPageState extends State<RapportsPage> {
   }
 
   void _loadData() {
-    _rapportsFuture = fetchRapports(widget.userId);
-    _emotionsFuture = fetchEmotions();
+    setState(() {
+      _rapportsFuture = fetchRapports(widget.userId);
+      _emotionsFuture = fetchEmotions();
+    });
   }
 
   List<Rapport> _filterRapports(List<Rapport> rapports) {
@@ -127,9 +144,8 @@ class _RapportsPageState extends State<RapportsPage> {
       case DateFilter.annee:
         start = DateTime(now.year, 1, 1);
         break;
-      case DateFilter.tout:
-        start = DateTime(2000); // Jamais utilisé
-        break;
+      default:
+        start = DateTime(2000);
     }
     return rapports
         .where((r) => r.date.isAfter(start.subtract(const Duration(days: 1))))
@@ -138,9 +154,7 @@ class _RapportsPageState extends State<RapportsPage> {
 
   Future<void> _deleteAndRefresh(int id) async {
     await deleteRapport(id, context);
-    setState(() {
-      _loadData();
-    });
+    _loadData();
   }
 
   @override
@@ -154,35 +168,22 @@ class _RapportsPageState extends State<RapportsPage> {
           child: Text(
             "Rapports",
             style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-            textAlign: TextAlign.left,
           ),
         ),
+        // Filtre de date
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
           child: DropdownButton<DateFilter>(
             value: _selectedFilter,
             items: const [
               DropdownMenuItem(value: DateFilter.tout, child: Text("Tous")),
-              DropdownMenuItem(
-                value: DateFilter.semaine,
-                child: Text("Cette semaine"),
-              ),
+              DropdownMenuItem(value: DateFilter.semaine, child: Text("Cette semaine")),
               DropdownMenuItem(value: DateFilter.mois, child: Text("Ce mois")),
-              DropdownMenuItem(
-                value: DateFilter.trimestre,
-                child: Text("Ce trimestre"),
-              ),
-              DropdownMenuItem(
-                value: DateFilter.annee,
-                child: Text("Cette année"),
-              ),
+              DropdownMenuItem(value: DateFilter.trimestre, child: Text("Ce trimestre")),
+              DropdownMenuItem(value: DateFilter.annee, child: Text("Cette année")),
             ],
             onChanged: (value) {
-              if (value != null) {
-                setState(() {
-                  _selectedFilter = value;
-                });
-              }
+              if (value != null) setState(() => _selectedFilter = value);
             },
           ),
         ),
@@ -192,19 +193,11 @@ class _RapportsPageState extends State<RapportsPage> {
               FutureBuilder<List<Emotion>>(
                 future: _emotionsFuture,
                 builder: (context, emotionsSnapshot) {
-                  if (emotionsSnapshot.connectionState ==
-                      ConnectionState.waiting) {
+                  if (emotionsSnapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
-                  } else if (emotionsSnapshot.hasError) {
-                    return Center(
-                      child: Text('Erreur: ${emotionsSnapshot.error}'),
-                    );
-                  } else if (!emotionsSnapshot.hasData ||
-                      emotionsSnapshot.data!.isEmpty) {
-                    return const Center(child: Text('Aucune émotion trouvée.'));
                   }
-
-                  final emotions = emotionsSnapshot.data!;
+                  
+                  final emotions = emotionsSnapshot.data ?? [];
                   final emotionMap = {for (var e in emotions) e.id: e.intitule};
 
                   return FutureBuilder<List<Rapport>>(
@@ -215,9 +208,7 @@ class _RapportsPageState extends State<RapportsPage> {
                       } else if (snapshot.hasError) {
                         return Center(child: Text('Erreur: ${snapshot.error}'));
                       } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                        return const Center(
-                          child: Text('Aucun rapport trouvé.'),
-                        );
+                        return const Center(child: Text('Aucun rapport trouvé.'));
                       }
 
                       final rapports = _filterRapports(snapshot.data!);
@@ -226,41 +217,27 @@ class _RapportsPageState extends State<RapportsPage> {
                         itemCount: rapports.length,
                         itemBuilder: (context, index) {
                           final rapport = rapports[index];
-                          final emotionLabel =
-                              emotionMap[rapport.emotion] ?? 'Inconnu';
+                          final emotionLabel = emotionMap[rapport.emotion] ?? 'Inconnu';
 
                           return Card(
                             margin: EdgeInsets.all(isMobile ? 4.0 : 8.0),
                             child: ListTile(
                               title: Text(
                                 rapport.titre,
-                                style: TextStyle(fontSize: isMobile ? 16 : 20),
+                                style: TextStyle(fontSize: isMobile ? 16 : 20, fontWeight: FontWeight.bold),
                               ),
                               subtitle: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    rapport.message,
-                                    style: TextStyle(
-                                      fontSize: isMobile ? 13 : 16,
-                                    ),
-                                  ),
+                                  Text(rapport.message),
                                   const SizedBox(height: 8),
                                   Text(
                                     'Émotion : $emotionLabel',
-                                    style: TextStyle(
-                                      fontSize: isMobile ? 12 : 14,
-                                      color: Colors.blueGrey,
-                                      fontStyle: FontStyle.italic,
-                                    ),
+                                    style: const TextStyle(color: Colors.blueGrey, fontStyle: FontStyle.italic),
                                   ),
-                                  const SizedBox(height: 10),
                                   Text(
-                                    'Publié le ${rapport.date.toLocal().toString().split(' ')[0]}',
-                                    style: TextStyle(
-                                      fontSize: isMobile ? 10 : 12,
-                                      color: Colors.grey[600],
-                                    ),
+                                    'Publié le ${rapport.date.day}/${rapport.date.month}/${rapport.date.year}',
+                                    style: TextStyle(fontSize: 10, color: Colors.grey[600]),
                                   ),
                                 ],
                               ),
@@ -268,73 +245,23 @@ class _RapportsPageState extends State<RapportsPage> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   IconButton(
-                                    icon: const Icon(
-                                      Icons.edit,
-                                      color: Colors.blue,
-                                    ),
-                                    tooltip: "Modifier",
+                                    icon: const Icon(Icons.edit, color: Colors.blue),
                                     onPressed: () async {
                                       final result = await Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder:
-                                              (context) => EditRapportPage(
-                                                rapport: rapport,
-                                                emotions: emotions,
-                                              ),
+                                          builder: (_) => EditRapportPage(
+                                            rapport: rapport,
+                                            emotions: emotions,
+                                          ),
                                         ),
                                       );
-                                      if (result == true) {
-                                        setState(() {
-                                          _loadData();
-                                        });
-                                      }
+                                      if (result == true) _loadData();
                                     },
                                   ),
                                   IconButton(
-                                    icon: const Icon(
-                                      Icons.delete,
-                                      color: Colors.red,
-                                    ),
-                                    tooltip: "Supprimer",
-                                    onPressed: () async {
-                                      final confirm = await showDialog<bool>(
-                                        context: context,
-                                        builder:
-                                            (ctx) => AlertDialog(
-                                              title: const Text('Confirmation'),
-                                              content: const Text(
-                                                'Voulez-vous vraiment supprimer ce rapport ?',
-                                              ),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed:
-                                                      () => Navigator.pop(
-                                                        ctx,
-                                                        false,
-                                                      ),
-                                                  child: const Text('Annuler'),
-                                                ),
-                                                TextButton(
-                                                  onPressed:
-                                                      () => Navigator.pop(
-                                                        ctx,
-                                                        true,
-                                                      ),
-                                                  child: const Text(
-                                                    'Supprimer',
-                                                    style: TextStyle(
-                                                      color: Colors.red,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                      );
-                                      if (confirm == true) {
-                                        await _deleteAndRefresh(rapport.id);
-                                      }
-                                    },
+                                    icon: const Icon(Icons.delete, color: Colors.red),
+                                    onPressed: () => _confirmDelete(rapport.id),
                                   ),
                                 ],
                               ),
@@ -346,6 +273,7 @@ class _RapportsPageState extends State<RapportsPage> {
                   );
                 },
               ),
+              // Bouton flottant pour ajouter un rapport
               Positioned(
                 bottom: 24,
                 left: 24,
@@ -354,17 +282,11 @@ class _RapportsPageState extends State<RapportsPage> {
                     final result = await Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder:
-                            (context) => AddRapportPage(userId: widget.userId),
+                        builder: (_) => AddRapportPage(userId: widget.userId),
                       ),
                     );
-                    if (result == true) {
-                      setState(() {
-                        _loadData();
-                      });
-                    }
+                    if (result == true) _loadData();
                   },
-                  tooltip: "Nouveau Rapport",
                   child: const Icon(Icons.add),
                 ),
               ),
@@ -373,5 +295,23 @@ class _RapportsPageState extends State<RapportsPage> {
         ),
       ],
     );
+  }
+
+  void _confirmDelete(int id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirmation'),
+        content: const Text('Supprimer ce rapport ?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) await _deleteAndRefresh(id);
   }
 }

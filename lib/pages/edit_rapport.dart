@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // Import pour le .env
 import 'rapports.dart';
 
 class EditRapportPage extends StatefulWidget {
@@ -23,6 +23,7 @@ class _EditRapportPageState extends State<EditRapportPage> {
   late TextEditingController _titreController;
   late TextEditingController _messageController;
   int? _selectedEmotionId;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -42,77 +43,133 @@ class _EditRapportPageState extends State<EditRapportPage> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final url = Uri.parse(
-      'https://chris-crp.freeboxos.fr/api/edit_rapports/${widget.rapport.id}',
-    );
-    final response = await http.put(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'titreRapport': _titreController.text,
-        'messageRapport': _messageController.text,
-        'emotionRapport': _selectedEmotionId,
-      }),
-    );
+    setState(() => _isLoading = true);
 
-    if (response.statusCode == 200) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Rapport mis à jour avec succès')),
+    // Récupération de l'URL de base depuis le .env
+    final String baseUrl = dotenv.env['API_BASE_URL'] ?? 'https://chris-crp.freeboxos.fr/api';
+    final url = Uri.parse('$baseUrl/edit_rapports/${widget.rapport.id}');
+
+    try {
+      final response = await http.put(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'titreRapport': _titreController.text.trim(),
+          'messageRapport': _messageController.text.trim(),
+          'emotionRapport': _selectedEmotionId,
+        }),
       );
-      Navigator.pop(context, true); // Signale un rafraîchissement nécessaire
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erreur lors de la mise à jour')),
-      );
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Rapport mis à jour avec succès'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context, true); // Retourne true pour rafraîchir la liste
+      } else {
+        _showErrorSnackBar('Erreur lors de la mise à jour (Code: ${response.statusCode})');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _showErrorSnackBar('Impossible de contacter le serveur. Vérifiez votre connexion.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Modifier le rapport')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              TextFormField(
-                controller: _titreController,
-                decoration: const InputDecoration(labelText: 'Titre'),
-                validator: (value) => value!.isEmpty ? 'Titre requis' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _messageController,
-                decoration: const InputDecoration(labelText: 'Message'),
-                maxLines: 4,
-                validator: (value) => value!.isEmpty ? 'Message requis' : null,
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<int>(
-                value: _selectedEmotionId,
-                items:
-                    widget.emotions.map((emotion) {
+      appBar: AppBar(
+        title: const Text('Modifier le rapport'),
+        centerTitle: true,
+      ),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Icon(Icons.edit_note, size: 60, color: Colors.blueGrey),
+                  const SizedBox(height: 24),
+                  TextFormField(
+                    controller: _titreController,
+                    decoration: const InputDecoration(
+                      labelText: 'Titre du rapport',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.title),
+                    ),
+                    validator: (value) => value!.isEmpty ? 'Titre requis' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _messageController,
+                    decoration: const InputDecoration(
+                      labelText: 'Votre message',
+                      border: OutlineInputBorder(),
+                      alignLabelWithHint: true,
+                    ),
+                    maxLines: 6,
+                    validator: (value) => value!.isEmpty ? 'Message requis' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<int>(
+                    value: _selectedEmotionId,
+                    items: widget.emotions.map((emotion) {
                       return DropdownMenuItem<int>(
                         value: emotion.id,
                         child: Text(emotion.intitule),
                       );
                     }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedEmotionId = value;
-                  });
-                },
-                decoration: const InputDecoration(labelText: 'Émotion'),
-                validator: (value) => value == null ? 'Émotion requise' : null,
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedEmotionId = value;
+                      });
+                    },
+                    decoration: const InputDecoration(
+                      labelText: 'Émotion associée',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.mood),
+                    ),
+                    validator: (value) => value == null ? 'Émotion requise' : null,
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      onPressed: _isLoading ? null : _submit,
+                      icon: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            )
+                          : const Icon(Icons.check),
+                      label: const Text('ENREGISTRER LES MODIFICATIONS', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _submit,
-                child: const Text('Enregistrer'),
-              ),
-            ],
+            ),
           ),
         ),
       ),
