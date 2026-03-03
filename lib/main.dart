@@ -2,13 +2,20 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'layout/side-menu.dart';
 import 'pages/ressources.dart';
 import 'pages/rapports.dart';
 import 'pages/admin.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    debugPrint("Erreur lors du chargement du fichier .env : $e");
+  }
   runApp(const MainApp());
 }
 
@@ -33,19 +40,18 @@ class Ressource {
       titre: json['titreRessource'],
       message: json['messageRessource'],
       date: DateTime.parse(json['dateRessource']),
-      image:
-          json['imageRessource'] != null
-              ? base64Decode(json['imageRessource'])
-              : null,
+      image: json['imageRessource'] != null
+          ? base64Decode(json['imageRessource'])
+          : null,
     );
   }
 }
 
 Future<List<Ressource>> fetchRessources() async {
+  final String baseUrl = dotenv.env['API_BASE_URL'] ?? 'https://chris-crp.freeboxos.fr/api';
   final response = await http.get(
-    Uri.parse('https://chris-crp.freeboxos.fr/api/ressources'),
+    Uri.parse('$baseUrl/ressources'),
   );
-
   if (response.statusCode == 200) {
     final List data = jsonDecode(response.body);
     return data.map((json) => Ressource.fromJson(json)).toList();
@@ -54,6 +60,7 @@ Future<List<Ressource>> fetchRessources() async {
   }
 }
 
+// 4. APPLICATION PRINCIPALE
 class MainApp extends StatefulWidget {
   const MainApp({super.key});
 
@@ -64,7 +71,7 @@ class MainApp extends StatefulWidget {
 class _MainAppState extends State<MainApp> {
   String currentPage = 'ressources';
   String? userId;
-  int? userRole; // Ajoute cette variable
+  int? userRole;
 
   @override
   void initState() {
@@ -76,9 +83,7 @@ class _MainAppState extends State<MainApp> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       userId = prefs.getString('id');
-      userRole = prefs.getInt(
-        'role',
-      ); // Stocke le rôle dans les prefs lors de la connexion
+      userRole = prefs.getInt('role'); 
     });
   }
 
@@ -86,6 +91,8 @@ class _MainAppState extends State<MainApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      title: 'CESIZen',
+      theme: ThemeData(primarySwatch: Colors.blue),
       home: LayoutBuilder(
         builder: (context, constraints) {
           final isMobile = constraints.maxWidth < 700;
@@ -93,15 +100,14 @@ class _MainAppState extends State<MainApp> {
 
           return Scaffold(
             backgroundColor: Colors.grey[200],
-            appBar:
-                isMobile
-                    ? AppBar(
-                      title: const Text('CESIZen'),
-                      backgroundColor: Colors.white,
-                      iconTheme: const IconThemeData(color: Colors.black),
-                      elevation: 0,
-                    )
-                    : null,
+            appBar: isMobile
+                ? AppBar(
+                    title: const Text('CESIZen'),
+                    backgroundColor: Colors.white,
+                    iconTheme: const IconThemeData(color: Colors.black),
+                    elevation: 0,
+                  )
+                : null,
             body: Row(
               children: [
                 if (!isMobile)
@@ -114,45 +120,46 @@ class _MainAppState extends State<MainApp> {
                 Expanded(
                   child: Padding(
                     padding: EdgeInsets.all(isMobile ? 4.0 : 16.0),
-                    child:
-                        currentPage == 'ressources'
-                            ? RessourcesPage(
-                              isMobile: isMobile,
-                              userRole: userRole ?? 1,
-                            )
-                            : currentPage == 'rapports'
-                            ? RapportsPage(
-                              isMobile: isMobile,
-                              userId: userId ?? '',
-                            )
-                            : AdminPage(),
+                    child: _buildCurrentPage(isMobile),
                   ),
                 ),
               ],
             ),
-            drawer:
-                isMobile
-                    ? Drawer(
-                      child: SideMenu(
-                        width: constraints.maxWidth * 0.7,
-                        onAccueil: () {
-                          setState(() => currentPage = 'ressources');
-                          Navigator.pop(context);
-                        },
-                        onTrackers: () {
-                          setState(() => currentPage = 'rapports');
-                          Navigator.pop(context);
-                        },
-                        onAdmin: () {
-                          setState(() => currentPage = 'admin');
-                          Navigator.pop(context);
-                        },
-                      ),
-                    )
-                    : null,
+            drawer: isMobile
+                ? Drawer(
+                    child: SideMenu(
+                      width: constraints.maxWidth * 0.7,
+                      onAccueil: () {
+                        setState(() => currentPage = 'ressources');
+                        Navigator.pop(context);
+                      },
+                      onTrackers: () {
+                        setState(() => currentPage = 'rapports');
+                        Navigator.pop(context);
+                      },
+                      onAdmin: () {
+                        setState(() => currentPage = 'admin');
+                        Navigator.pop(context);
+                      },
+                    ),
+                  )
+                : null,
           );
         },
       ),
     );
+  }
+
+  Widget _buildCurrentPage(bool isMobile) {
+    switch (currentPage) {
+      case 'ressources':
+        return RessourcesPage(isMobile: isMobile, userRole: userRole ?? 1);
+      case 'rapports':
+        return RapportsPage(isMobile: isMobile, userId: userId ?? '');
+      case 'admin':
+        return const AdminPage();
+      default:
+        return const Center(child: Text("Page non trouvée"));
+    }
   }
 }

@@ -1,16 +1,17 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // Import pour le .env
 import './add_user.dart';
 import './edit_user.dart';
-import 'dart:convert';
 
-// Modèle utilisateur
+// --- MODÈLE ---
 class UserAdmin {
   final String id;
   final String pseudo;
   final String email;
   final int role;
-  final String status; // Nouveau champ
+  final String status;
 
   UserAdmin({
     required this.id,
@@ -27,13 +28,8 @@ class UserAdmin {
       return 1;
     }
 
-    String parseId(dynamic value) {
-      if (value == null) return '';
-      return value.toString();
-    }
-
     return UserAdmin(
-      id: parseId(json['idUser'] ?? json['idUtilisateur']),
+      id: (json['idUser'] ?? json['idUtilisateur'] ?? '').toString(),
       pseudo: json['pseudo'] ?? json['pseudoUtilisateur'] ?? '',
       email: json['email'] ?? json['emailUtilisateur'] ?? '',
       role: parseRole(json['role'] ?? json['roleUtilisateur']),
@@ -42,11 +38,13 @@ class UserAdmin {
   }
 }
 
-// Récupération des utilisateurs
+// --- LOGIQUE API ---
+
 Future<List<UserAdmin>> fetchUsers() async {
-  final response = await http.get(
-    Uri.parse('https://chris-crp.freeboxos.fr/api/users'),
-  );
+  final String baseUrl = dotenv.env['API_BASE_URL'] ?? 'https://chris-crp.freeboxos.fr/api';
+  
+  final response = await http.get(Uri.parse('$baseUrl/users'));
+  
   if (response.statusCode == 200) {
     final List data = jsonDecode(response.body);
     return data.map((json) => UserAdmin.fromJson(json)).toList();
@@ -55,52 +53,51 @@ Future<List<UserAdmin>> fetchUsers() async {
   }
 }
 
-// Suppression
 Future<void> deleteUser(String id, BuildContext context) async {
-  final response = await http.delete(
-    Uri.parse('https://chris-crp.freeboxos.fr/api/users/$id'),
-  );
+  final String baseUrl = dotenv.env['API_BASE_URL'] ?? 'https://chris-crp.freeboxos.fr/api';
+  
+  final response = await http.delete(Uri.parse('$baseUrl/users/$id'));
+  
+  if (!context.mounted) return;
+
   if (response.statusCode == 200) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Utilisateur supprimé')));
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Utilisateur supprimé')));
   } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Erreur lors de la suppression')),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Erreur lors de la suppression')));
   }
 }
 
-// Activation/désactivation
-Future<void> toggleUserStatus(
-  String id,
-  String currentStatus,
-  BuildContext context,
-) async {
+Future<void> toggleUserStatus(String id, String currentStatus, BuildContext context) async {
+  final String baseUrl = dotenv.env['API_BASE_URL'] ?? 'https://chris-crp.freeboxos.fr/api';
   final newStatus = currentStatus == 'activé' ? 'désactivé' : 'activé';
 
-  final response = await http.put(
-    Uri.parse('https://chris-crp.freeboxos.fr/api/users/$id/status'),
-    headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({'status': newStatus}),
-  );
+  try {
+    final response = await http.put(
+      Uri.parse('$baseUrl/users/$id/status'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'status': newStatus}),
+    );
 
-  if (response.statusCode == 200) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          "Utilisateur ${newStatus == 'activé' ? 'activé' : 'désactivé'}",
-        ),
-      ),
-    );
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Erreur lors de la mise à jour du statut")),
-    );
+    if (!context.mounted) return;
+
+    if (response.statusCode == 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Utilisateur $newStatus")),
+      );
+    } else {
+      throw Exception();
+    }
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Erreur lors de la mise à jour du statut")),
+      );
+    }
   }
 }
 
-// Page Admin
+// --- INTERFACE ---
+
 class AdminPage extends StatefulWidget {
   const AdminPage({super.key});
 
@@ -114,13 +111,19 @@ class _AdminPageState extends State<AdminPage> {
   @override
   void initState() {
     super.initState();
-    _usersFuture = fetchUsers();
+    _loadUsers();
+  }
+
+  void _loadUsers() {
+    setState(() {
+      _usersFuture = fetchUsers();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[200],
+      backgroundColor: Colors.grey[100],
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: FutureBuilder<List<UserAdmin>>(
@@ -139,139 +142,106 @@ class _AdminPageState extends State<AdminPage> {
               itemCount: users.length,
               itemBuilder: (context, index) {
                 final user = users[index];
-                String roleLabel =
-                    user.role == 2 ? 'Administrateur' : 'Utilisateur';
-
-                return Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.person),
-                    title: Text(user.pseudo),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(user.email),
-                        Text('Rôle : $roleLabel'),
-                        Text(
-                          'Statut : ${user.status == 'activé' ? 'Activé' : 'Désactivé'}',
-                        ),
-                      ],
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit, color: Colors.blue),
-                          tooltip: "Modifier l'utilisateur",
-                          onPressed: () async {
-                            final result = await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder:
-                                    (_) => EditUserPage(
-                                      id: user.id,
-                                      pseudo: user.pseudo,
-                                      email: user.email,
-                                      role: user.role,
-                                    ),
-                              ),
-                            );
-                            if (result == true) {
-                              setState(() {
-                                _usersFuture = fetchUsers();
-                              });
-                            }
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          tooltip: "Supprimer l'utilisateur",
-                          onPressed: () async {
-                            final confirm = await showDialog<bool>(
-                              context: context,
-                              builder:
-                                  (context) => AlertDialog(
-                                    title: const Text('Confirmation'),
-                                    content: Text(
-                                      'Voulez-vous vraiment supprimer ${user.pseudo} ?',
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed:
-                                            () => Navigator.pop(context, false),
-                                        child: const Text('Annuler'),
-                                      ),
-                                      TextButton(
-                                        onPressed:
-                                            () => Navigator.pop(context, true),
-                                        child: const Text('Supprimer'),
-                                      ),
-                                    ],
-                                  ),
-                            );
-                            if (confirm == true) {
-                              await deleteUser(user.id, context);
-                              setState(() {
-                                _usersFuture = fetchUsers();
-                              });
-                            }
-                          },
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            user.status == 'activé'
-                                ? Icons.lock_open
-                                : Icons.lock,
-                            color:
-                                user.status == 'activé'
-                                    ? Colors.green
-                                    : Colors.grey,
-                          ),
-                          tooltip:
-                              user.status == 'activé'
-                                  ? "Désactiver l'utilisateur"
-                                  : "Activer l'utilisateur",
-                          onPressed: () async {
-                            await toggleUserStatus(
-                              user.id,
-                              user.status,
-                              context,
-                            );
-                            setState(() {
-                              _usersFuture = fetchUsers();
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                );
+                return _buildUserCard(user);
               },
             );
           },
         ),
       ),
-      floatingActionButton: Align(
-        alignment: Alignment.bottomLeft,
-        child: Padding(
-          padding: const EdgeInsets.only(left: 32.0, bottom: 16.0),
-          child: FloatingActionButton(
-            onPressed: () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AddUserPage()),
-              );
-              if (result == true) {
-                setState(() {
-                  _usersFuture = fetchUsers();
-                });
-              }
-            },
-            tooltip: "Ajouter un utilisateur",
-            child: const Icon(Icons.person_add),
-          ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AddUserPage()),
+          );
+          if (result == true) _loadUsers();
+        },
+        label: const Text("Nouvel Utilisateur"),
+        icon: const Icon(Icons.person_add),
+        backgroundColor: Colors.blueAccent,
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    );
+  }
+
+  Widget _buildUserCard(UserAdmin user) {
+    bool isActivated = user.status == 'activé';
+    
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: isActivated ? Colors.blue[100] : Colors.grey[300],
+          child: Icon(Icons.person, color: isActivated ? Colors.blue : Colors.grey),
+        ),
+        title: Text(user.pseudo, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(user.email),
+            Text('Rôle : ${user.role == 2 ? 'Administrateur' : 'Utilisateur'}', 
+                 style: const TextStyle(fontStyle: FontStyle.italic)),
+            Text('Statut : ${isActivated ? 'Activé' : 'Désactivé'}',
+                 style: TextStyle(color: isActivated ? Colors.green : Colors.red, fontWeight: FontWeight.w500)),
+          ],
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.edit, color: Colors.blue),
+              onPressed: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => EditUserPage(
+                      id: user.id,
+                      pseudo: user.pseudo,
+                      email: user.email,
+                      role: user.role,
+                    ),
+                  ),
+                );
+                if (result == true) _loadUsers();
+              },
+            ),
+            IconButton(
+              icon: Icon(isActivated ? Icons.lock_open : Icons.lock, 
+                         color: isActivated ? Colors.green : Colors.orange),
+              onPressed: () async {
+                await toggleUserStatus(user.id, user.status, context);
+                _loadUsers();
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red),
+              onPressed: () => _confirmDelete(user),
+            ),
+          ],
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
     );
+  }
+
+  void _confirmDelete(UserAdmin user) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer cet utilisateur ?'),
+        content: Text('Cette action est irréversible pour ${user.pseudo}.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      await deleteUser(user.id, context);
+      _loadUsers();
+    }
   }
 }

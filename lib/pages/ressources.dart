@@ -2,10 +2,11 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'add_ressources.dart'; // Ajoute cet import en haut du fichier
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // Import crucial
+import 'add_ressources.dart'; 
 import 'edit_ressource.dart';
 
-// Modèle Ressource (à déplacer ici ou à importer)
+// --- MODÈLE ---
 class Ressource {
   final int id;
   final String titre;
@@ -25,19 +26,24 @@ class Ressource {
     return Ressource(
       id: json['idRessource'],
       titre: json['titreRessource'],
-      message: json['descriptionRessource'],
+      // Note : J'ai gardé 'descriptionRessource' comme dans ton dernier message
+      message: json['descriptionRessource'] ?? '', 
       date: DateTime.parse(json['dateRessource']),
-      image:
-          json['imageRessource'] != null
-              ? base64Decode(json['imageRessource'])
-              : null,
+      image: json['imageRessource'] != null
+          ? base64Decode(json['imageRessource'])
+          : null,
     );
   }
 }
 
+// --- LOGIQUE API ---
+
 Future<List<Ressource>> fetchRessources() async {
+  // Récupération de l'URL depuis le .env
+  final String baseUrl = dotenv.env['API_BASE_URL'] ?? 'https://chris-crp.freeboxos.fr/api';
+
   final response = await http.get(
-    Uri.parse('https://chris-crp.freeboxos.fr/api/ressources'),
+    Uri.parse('$baseUrl/ressources'),
   );
 
   if (response.statusCode == 200) {
@@ -49,17 +55,23 @@ Future<List<Ressource>> fetchRessources() async {
 }
 
 Future<void> deleteRessource(int id, BuildContext context) async {
+  // Récupération de l'URL depuis le .env
+  final String baseUrl = dotenv.env['API_BASE_URL'] ?? 'https://chris-crp.freeboxos.fr/api';
+
   final response = await http.delete(
-    Uri.parse('https://chris-crp.freeboxos.fr/api/ressources/$id'),
+    Uri.parse('$baseUrl/ressources/$id'),
   );
+
   if (response.statusCode != 200) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Erreur lors de la suppression de la ressource'),
-      ),
-    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erreur lors de la suppression')),
+      );
+    }
   }
 }
+
+// --- INTERFACE ---
 
 class RessourcesPage extends StatefulWidget {
   final bool isMobile;
@@ -85,19 +97,20 @@ class _RessourcesPageState extends State<RessourcesPage> {
   }
 
   void _loadRessources() {
-    _ressourcesFuture = fetchRessources();
+    setState(() {
+      _ressourcesFuture = fetchRessources();
+    });
   }
 
   Future<void> _deleteAndRefresh(int id) async {
     await deleteRessource(id, context);
-    setState(() {
-      _loadRessources();
-    });
+    _loadRessources();
   }
 
   @override
   Widget build(BuildContext context) {
     final isMobile = widget.isMobile;
+    
     return Stack(
       children: [
         Column(
@@ -108,7 +121,6 @@ class _RessourcesPageState extends State<RessourcesPage> {
               child: Text(
                 "Ressources",
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.left,
               ),
             ),
             Expanded(
@@ -120,9 +132,7 @@ class _RessourcesPageState extends State<RessourcesPage> {
                   } else if (snapshot.hasError) {
                     return Center(child: Text('Erreur: ${snapshot.error}'));
                   } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Center(
-                      child: Text('Aucune ressource trouvée.'),
-                    );
+                    return const Center(child: Text('Aucune ressource trouvée.'));
                   }
 
                   final ressources = snapshot.data!;
@@ -137,127 +147,36 @@ class _RessourcesPageState extends State<RessourcesPage> {
                         child: ListTile(
                           title: Text(
                             ressource.titre,
-                            style: TextStyle(fontSize: isMobile ? 16 : 20),
+                            style: TextStyle(fontSize: isMobile ? 16 : 20, fontWeight: FontWeight.bold),
                           ),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              const SizedBox(height: 8),
                               Text(
                                 ressource.message,
                                 style: TextStyle(fontSize: isMobile ? 13 : 16),
                               ),
                               if (ressource.image != null) ...[
+                                const SizedBox(height: 10),
                                 Center(
-                                  child: Container(
-                                    margin: const EdgeInsets.symmetric(
-                                      vertical: 10,
-                                      horizontal: 8,
-                                    ),
-                                    child: Image.memory(
-                                      ressource.image!,
-                                      height: isMobile ? 120 : 250,
-                                      fit: BoxFit.cover,
-                                    ),
+                                  child: Image.memory(
+                                    ressource.image!,
+                                    height: isMobile ? 150 : 300,
+                                    fit: BoxFit.contain,
                                   ),
                                 ),
                               ],
+                              const SizedBox(height: 8),
                               Text(
-                                'Publié le ${ressource.date.toLocal().toString().split(' ')[0]}',
-                                style: TextStyle(
-                                  fontSize: isMobile ? 10 : 12,
-                                  color: Colors.grey[600],
-                                ),
+                                'Publié le ${ressource.date.day}/${ressource.date.month}/${ressource.date.year}',
+                                style: TextStyle(fontSize: 10, color: Colors.grey[600]),
                               ),
                             ],
                           ),
-                          trailing:
-                              widget.userRole == 2
-                                  ? Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.edit,
-                                          color: Colors.blue,
-                                        ),
-                                        tooltip: "Modifier la ressource",
-                                        onPressed: () async {
-                                          final result = await Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder:
-                                                  (_) => EditRessourcePage(
-                                                    id: ressource.id,
-                                                    titre: ressource.titre,
-                                                    message: ressource.message,
-                                                    image: ressource.image,
-                                                    userRole: widget.userRole,
-                                                  ),
-                                            ),
-                                          );
-                                          if (result == true) {
-                                            setState(() {
-                                              _loadRessources();
-                                            });
-                                          }
-                                        },
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.delete,
-                                          color: Colors.red,
-                                        ),
-                                        tooltip: "Supprimer la ressource",
-                                        onPressed: () async {
-                                          final confirm = await showDialog<
-                                            bool
-                                          >(
-                                            context: context,
-                                            builder:
-                                                (ctx) => AlertDialog(
-                                                  title: const Text(
-                                                    'Confirmation',
-                                                  ),
-                                                  content: const Text(
-                                                    'Voulez-vous vraiment supprimer cette ressource ?',
-                                                  ),
-                                                  actions: [
-                                                    TextButton(
-                                                      onPressed:
-                                                          () => Navigator.pop(
-                                                            ctx,
-                                                            false,
-                                                          ),
-                                                      child: const Text(
-                                                        'Annuler',
-                                                      ),
-                                                    ),
-                                                    TextButton(
-                                                      onPressed:
-                                                          () => Navigator.pop(
-                                                            ctx,
-                                                            true,
-                                                          ),
-                                                      child: const Text(
-                                                        'Supprimer',
-                                                        style: TextStyle(
-                                                          color: Colors.red,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                          );
-                                          if (confirm == true) {
-                                            await _deleteAndRefresh(
-                                              ressource.id,
-                                            );
-                                          }
-                                        },
-                                      ),
-                                    ],
-                                  )
-                                  : null,
+                          trailing: widget.userRole == 2 
+                            ? _buildAdminActions(ressource) 
+                            : null,
                         ),
                       );
                     },
@@ -267,6 +186,7 @@ class _RessourcesPageState extends State<RessourcesPage> {
             ),
           ],
         ),
+        // Bouton flottant uniquement pour les admins (Rôle 2)
         if (widget.userRole == 2)
           Positioned(
             bottom: 24,
@@ -277,17 +197,60 @@ class _RessourcesPageState extends State<RessourcesPage> {
                   context,
                   MaterialPageRoute(builder: (_) => const AddRessourcePage()),
                 );
-                if (result == true) {
-                  setState(() {
-                    _loadRessources();
-                  });
-                }
+                if (result == true) _loadRessources();
               },
-              tooltip: "Nouvelle ressource",
               child: const Icon(Icons.add),
             ),
           ),
       ],
     );
+  }
+
+  Widget _buildAdminActions(Ressource ressource) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.edit, color: Colors.blue),
+          onPressed: () async {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => EditRessourcePage(
+                  id: ressource.id,
+                  titre: ressource.titre,
+                  message: ressource.message,
+                  image: ressource.image,
+                  userRole: widget.userRole,
+                ),
+              ),
+            );
+            if (result == true) _loadRessources();
+          },
+        ),
+        IconButton(
+          icon: const Icon(Icons.delete, color: Colors.red),
+          onPressed: () => _showDeleteDialog(ressource.id),
+        ),
+      ],
+    );
+  }
+
+  void _showDeleteDialog(int id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirmation'),
+        content: const Text('Supprimer cette ressource ?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true), 
+            child: const Text('Supprimer', style: TextStyle(color: Colors.red))
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) await _deleteAndRefresh(id);
   }
 }

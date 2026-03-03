@@ -1,7 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // Import pour le .env
 import '../../main.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -12,6 +13,8 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
+  final _formKey = GlobalKey<FormState>();
+  
   final TextEditingController nomController = TextEditingController();
   final TextEditingController prenomController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
@@ -19,10 +22,10 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController dateNaissanceController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
-  String sexe = "H"; // H = Homme, F = Femme, A = Autre
+  String sexe = "H"; 
+  bool isLoading = false;
 
-  final _formKey = GlobalKey<FormState>();
-
+  // Validation format de date
   bool _isValidDate(String input) {
     try {
       final parts = input.split('-');
@@ -37,261 +40,173 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
+  // --- LOGIQUE D'INSCRIPTION ---
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final url = Uri.parse('https://chris-crp.freeboxos.fr/api/register');
+    setState(() => isLoading = true);
 
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'nomUtilisateur': nomController.text.trim(),
-        'prénomUtilisateur': prenomController.text.trim(),
-        'emailUtilisateur': emailController.text.trim(),
-        'pseudoUtilisateur': pseudoController.text.trim(),
-        'sexeUtilisateur': sexe,
-        'dateNaissanceUtilisateur': dateNaissanceController.text.trim(),
-        'motDePasseUtilisateur': passwordController.text.trim(),
-      }),
-    );
+    final String baseUrl = dotenv.env['API_BASE_URL'] ?? 'https://chris-crp.freeboxos.fr/api';
 
-    if (response.statusCode == 201) {
-      final loginResponse = await http.post(
-        Uri.parse('https://chris-crp.freeboxos.fr/api/login'),
+    try {
+      // 1. Appel à l'inscription
+      final response = await http.post(
+        Uri.parse('$baseUrl/register'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
+          'nomUtilisateur': nomController.text.trim(),
+          'prénomUtilisateur': prenomController.text.trim(),
           'emailUtilisateur': emailController.text.trim(),
+          'pseudoUtilisateur': pseudoController.text.trim(),
+          'sexeUtilisateur': sexe,
+          'dateNaissanceUtilisateur': dateNaissanceController.text.trim(),
           'motDePasseUtilisateur': passwordController.text.trim(),
         }),
       );
 
-      if (loginResponse.statusCode == 200) {
-        final data = jsonDecode(loginResponse.body)['utilisateur'];
-
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('id', data['id']);
-        await prefs.setString('nom', data['nom']);
-        await prefs.setString('prénom', data['prénom']);
-        await prefs.setString('email', data['email']);
-        await prefs.setString('pseudo', data['pseudo']);
-        await prefs.setInt('role', data['role']);
-
-        if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => MainApp()),
+      if (response.statusCode == 201) {
+        // 2. Connexion automatique après inscription réussie
+        final loginResponse = await http.post(
+          Uri.parse('$baseUrl/login'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'emailUtilisateur': emailController.text.trim(),
+            'motDePasseUtilisateur': passwordController.text.trim(),
+          }),
         );
+
+        if (loginResponse.statusCode == 200) {
+          final data = jsonDecode(loginResponse.body)['utilisateur'];
+
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('id', data['id'].toString());
+          await prefs.setString('nom', data['nom'] ?? '');
+          await prefs.setString('prénom', data['prénom'] ?? '');
+          await prefs.setString('email', data['email'] ?? '');
+          await prefs.setString('pseudo', data['pseudo'] ?? '');
+          await prefs.setInt('role', data['role'] ?? 1);
+
+          if (!mounted) return;
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const MainApp()),
+          );
+        } else {
+          _showSnackBar("Inscription réussie, mais connexion automatique échouée.");
+        }
       } else {
-        final error =
-            jsonDecode(loginResponse.body)['error'] ??
-            'Erreur de connexion après inscription';
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Erreur : $error")));
+        final error = jsonDecode(response.body)['error'] ?? 'Erreur inconnue';
+        _showSnackBar("Erreur : $error");
       }
-    } else {
-      final error = jsonDecode(response.body)['error'] ?? 'Erreur inconnue';
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Erreur : $error")));
+    } catch (e) {
+      _showSnackBar("Erreur réseau : impossible de joindre le serveur.");
+    } finally {
+      if (mounted) setState(() => isLoading = false);
     }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-
     return Scaffold(
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(title: const Text('Inscription'), centerTitle: true),
       body: Center(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isMobile = constraints.maxWidth < 600;
-            return Container(
-              width: isMobile ? double.infinity : constraints.maxWidth * 0.3,
-              margin: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 0),
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 10,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: SingleChildScrollView(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isMobile = constraints.maxWidth < 600;
+              return Container(
+                width: isMobile ? double.infinity : 500,
+                padding: const EdgeInsets.all(32),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4)),
+                  ],
+                ),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 24),
-                        child: Image.asset(
-                          'assets/images/logo.png',
-                          height: 80,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                      TextFormField(
-                        controller: nomController,
-                        decoration: const InputDecoration(
-                          labelText: 'Nom *',
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Le nom est requis';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: prenomController,
-                        decoration: const InputDecoration(
-                          labelText: 'Prénom *',
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Le prénom est requis';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: emailController,
-                        decoration: const InputDecoration(
-                          labelText: 'Email *',
-                          border: OutlineInputBorder(),
-                        ),
-                        keyboardType: TextInputType.emailAddress,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'L\'email est requis';
-                          }
-                          final emailRegex = RegExp(
-                            r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-                          );
-                          if (!emailRegex.hasMatch(value.trim())) {
-                            return 'Email invalide';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: pseudoController,
-                        decoration: const InputDecoration(
-                          labelText: 'Pseudo *',
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Le pseudo est requis';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              "Sexe :",
-                              style: TextStyle(fontSize: 16),
-                            ),
-                            Row(
-                              children: [
-                                Radio<String>(
-                                  value: "H",
-                                  groupValue: sexe,
-                                  onChanged: (value) {
-                                    setState(() => sexe = value!);
-                                  },
-                                ),
-                                const Text("Homme"),
-                                Radio<String>(
-                                  value: "F",
-                                  groupValue: sexe,
-                                  onChanged: (value) {
-                                    setState(() => sexe = value!);
-                                  },
-                                ),
-                                const Text("Femme"),
-                                Radio<String>(
-                                  value: "A",
-                                  groupValue: sexe,
-                                  onChanged: (value) {
-                                    setState(() => sexe = value!);
-                                  },
-                                ),
-                                const Text("Autre"),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: dateNaissanceController,
-                        decoration: const InputDecoration(
-                          labelText: 'Date de naissance (YYYY-MM-DD)',
-                          border: OutlineInputBorder(),
-                        ),
-                        keyboardType: TextInputType.datetime,
-                        validator: (value) {
-                          if (value != null &&
-                              value.trim().isNotEmpty &&
-                              !_isValidDate(value.trim())) {
-                            return 'Date invalide (format YYYY-MM-DD)';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: passwordController,
-                        obscureText: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Mot de passe *',
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Le mot de passe est requis';
-                          }
-                          if (value.trim().length < 6) {
-                            return 'Le mot de passe doit faire au moins 6 caractères';
-                          }
-                          return null;
-                        },
-                      ),
+                      Image.asset('assets/images/logo.png', height: 80, errorBuilder: (c, e, s) => const Icon(Icons.person_add, size: 60)),
                       const SizedBox(height: 24),
+                      _buildTextField(nomController, 'Nom *'),
+                      _buildTextField(prenomController, 'Prénom *'),
+                      _buildTextField(emailController, 'Email *', keyboard: TextInputType.emailAddress),
+                      _buildTextField(pseudoController, 'Pseudo *'),
+                      
+                      const SizedBox(height: 16),
+                      _buildSexeSelector(),
+                      const SizedBox(height: 16),
+
+                      _buildTextField(dateNaissanceController, 'Date de naissance (YYYY-MM-DD)', 
+                        validator: (v) => (v != null && v.isNotEmpty && !_isValidDate(v)) ? 'Format YYYY-MM-DD requis' : null
+                      ),
+                      _buildTextField(passwordController, 'Mot de passe *', obscure: true),
+                      
+                      const SizedBox(height: 32),
                       SizedBox(
                         width: double.infinity,
+                        height: 50,
                         child: ElevatedButton(
-                          onPressed: _register,
-                          child: const Text('Créer un compte'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blueAccent,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          onPressed: isLoading ? null : _register,
+                          child: isLoading 
+                            ? const CircularProgressIndicator(color: Colors.white) 
+                            : const Text('CRÉER MON COMPTE', style: TextStyle(fontWeight: FontWeight.bold)),
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
-      backgroundColor: Colors.grey[100],
+    );
+  }
+
+  Widget _buildTextField(TextEditingController controller, String label, {bool obscure = false, TextInputType keyboard = TextInputType.text, String? Function(String?)? validator}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: TextFormField(
+        controller: controller,
+        obscureText: obscure,
+        keyboardType: keyboard,
+        decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
+        validator: validator ?? (value) => (value == null || value.trim().isEmpty) ? 'Ce champ est requis' : null,
+      ),
+    );
+  }
+
+  Widget _buildSexeSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("Sexe :", style: TextStyle(fontWeight: FontWeight.bold)),
+        Row(
+          children: [
+            Radio<String>(value: "H", groupValue: sexe, onChanged: (v) => setState(() => sexe = v!)),
+            const Text("H"),
+            Radio<String>(value: "F", groupValue: sexe, onChanged: (v) => setState(() => sexe = v!)),
+            const Text("F"),
+            Radio<String>(value: "A", groupValue: sexe, onChanged: (v) => setState(() => sexe = v!)),
+            const Text("Autre"),
+          ],
+        ),
+      ],
     );
   }
 }
